@@ -121,6 +121,8 @@ class Rect(object):
 
 class Save(object):
 
+    """A context manager which Keeps calls to save() and restore() balanced."""
+
     def __init__(self, cr):
         self.cr = cr
 
@@ -133,18 +135,26 @@ class Save(object):
 
 class Box(object):
 
-    def __init__(self, cr, bounds):
+    """A context manager which centers within the given rectangle.
+
+    Implicitly calls save() / and restore. If clip is True, also clips
+    to the rectangle.
+    """
+
+    def __init__(self, cr, bounds, clip=True):
         self.cr = cr
         self.center = bounds.center
         self.bounds = Rect(Point(0, 0), bounds.width, bounds.height)
         (self.x, self.y) = bounds.northwest()
         self.width = bounds.width
         self.height = bounds.height
+        self.clip = clip
 
     def __enter__(self):
         self.cr.save()
         self.cr.rectangle(self.x, self.y, self.width, self.height)
-        self.cr.clip()
+        if self.clip:
+            self.cr.clip()
         self.cr.translate(*self.center)
         return self.bounds
 
