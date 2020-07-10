@@ -348,7 +348,7 @@ class Debuger(object):
                         'Point': Point,
                         'Rect': Rect
                     })
-            except VMError as e:
+            except Exception as e:
                 error = e
 
             self.transform = cr.get_matrix()
@@ -385,6 +385,10 @@ class Debuger(object):
             cr.line_to(*vm_gutter.southwest())
             cr.rel_line_to(0, -content.height)
             cr.stroke()
+
+        if error is not None:
+            with Box(cr, status_bar) as layout:
+                cr.show_text(repr(error))
 
 
     def handle_key_event(self, event):
