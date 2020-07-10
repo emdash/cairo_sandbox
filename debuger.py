@@ -361,11 +361,12 @@ class Debuger(object):
         with Save(cr):
             # stroke any residual path for feedback
             cr.set_source_rgb(1.0, 1.0, 1.0)
-            cr.set_operator(cairo.OPERATOR_DIFFERENCE)
             cr.set_line_width(0.1)
             cr.stroke()
 
         with Save(cr):
+            cr.set_source_rgb(1.0, 1.0, 1.0)
+            cr.set_operator(cairo.OPERATOR_DIFFERENCE)
             # draw the current point.
             x, y = self.transform.transform_point(x, y)
             cr.translate(x, y)
