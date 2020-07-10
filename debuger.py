@@ -225,18 +225,6 @@ def frange(lower, upper, step):
         accum += step
 
 
-class VM(object):
-    """Executes code on the given cairo context."""
-
-    def __init__(self, context, bounds, trace=False):
-        self.context = context
-        self.bounds = bounds
-        self.trace = Logger("VM")
-
-    def run(self, program, target, env):
-        pass
-
-
 class Token(object):
 
     def __init__(self, source, line, index):
@@ -309,18 +297,7 @@ class Box(object):
         self.cr.restore()
 
 
-class DebugerState(object):
-
-    def __init__(self, path):
-        self.path = path
-        self.prog = None
-        self.load()
-
-    def load(self):
-        pass
-
-
-class Debugger(object):
+class Debuger(object):
 
     trace = Logger("Editor:")
     status_bar_height = 20.5
@@ -329,43 +306,19 @@ class Debugger(object):
     token_length = 55.0
 
     def __init__(self, reader):
-        self.state = DebugerState(sys.argv[1])
         self.allowable = []
         self.transform = None
         self.reader = reader
         self.reader.start()
+        self.path = sys.argv[1]
+        self.prog = None
+        self.load()
 
-    def text(self, cr, text):
-        """Draw text centered at (0, 0)"""
-        _, _, tw, th, _, _ = cr.text_extents(text)
-        with Save(cr):
-            cr.move_to(-tw / 2, th / 2)
-            cr.show_text(text)
-            return (tw, th)
-
-    def rect(self, cr, rect):
-        """Place the given rect into the path"""
-        with Save(cr):
-            (x, y) = rect.northwest()
-            cr.rectangle(x, y, rect.width, rect.height)
-
-    def token(self, cr, token, fill=True):
-        _, _, tw, _, _, _ = cr.text_extents(token)
-        th = 10
-        rect = Rect(Point(0, 0), self.code_gutter_width - 5.0, th + 5.0)
-        with Save(cr):
-            self.rect(cr, rect)
-            cr.set_source_rgb(0.5, 0.5, 0.5)
-            if fill:
-                cr.fill()
-            else:
-                cr.stroke()
-            cr.set_source_rgb(0.0, 0.0, 0.0)
-            self.text(cr, token)
-        return (rect.width, rect.height)
+    def load(self):
+        self.prog = compile(open(self.path, "r").read(), self.path, "exec")
 
     def run(self, cr, origin, scale, window_size):
-        self.trace("run:", self.state)
+        self.trace("run:")
 
         window = Rect.from_top_left(Point(0, 0), window_size.x, window_size.y)
 
@@ -382,15 +335,19 @@ class Debugger(object):
         bounds = Rect(Point(0, 0), content.width / scale.x, content.height / scale.y)
 
         with Box(cr, content):
-            cr.scale(scale.x, scale.y)
-            self.rect(cr, Rect(Point(0, 0), 50, 50))
-            cr.fill()
-
             # create a new vm instance with the window as the target.
             try:
                 error = None
-                vm = VM(cr, bounds, False)
-                vm.run(self.state.prog, 'main', self.reader.env)
+                exec(
+                    self.prog,
+                    {
+                        'cr': cr,
+                        'cairo': cairo,
+                        'Save': Save,
+                        'Box': Box,
+                        'Point': Point,
+                        'Rect': Rect
+                    })
             except VMError as e:
                 error = e
 
@@ -430,7 +387,7 @@ class Debugger(object):
 
 
     def handle_key_event(self, event):
-        self.trace("handle_key_event:", self.state)
+        self.trace("handle_key_event")
 
     def handle_button_press(self, event):
         pass
@@ -449,7 +406,7 @@ class ReaderThread(threading.Thread):
 def notify_thread(debuger):
 
     def modified(*unused, **unused2):
-        GObject.idle_add(debuger.state.load)
+        GObject.idle_add(debuger.load)
 
     wm = pyinotify.WatchManager()
     wm.add_watch(sys.argv[1], pyinotify.IN_MODIFY)
@@ -494,7 +451,7 @@ def gui():
 
     GObject.timeout_add(25, update)
 
-    debuger = Debugger(ReaderThread())
+    debuger = Debuger(ReaderThread())
     notify_thread(debuger)
 
     window = Gtk.Window()
