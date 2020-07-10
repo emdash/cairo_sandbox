@@ -328,13 +328,7 @@ class Debuger(object):
         (content, vm_gutter) = remainder\
             .split_vertical(window.width - self.vm_gutter_width)
 
-        # set default context state
-        cr.set_source_rgb(0, 0, 0)
-        cr.set_line_width(1.0)
-
-        bounds = Rect(Point(0, 0), content.width / scale.x, content.height / scale.y)
-
-        with Box(cr, content):
+        with Save(cr):
             # create a new vm instance with the window as the target.
             try:
                 error = None
@@ -346,7 +340,8 @@ class Debuger(object):
                         'Save': Save,
                         'Box': Box,
                         'Point': Point,
-                        'Rect': Rect
+                        'Rect': Rect,
+                        'window': Rect.from_top_left(Point(0, 0), content.width, content.height)
                     })
             except Exception as e:
                 error = e
