@@ -45,101 +45,8 @@ import sys
 import time
 
 
-class Logger(object):
-
-    """Simple but featurfule logger.
-
-    Add class-level instance for any class that needs logging
-    functionality. Implements __call__ so it can be called like a
-    regular method. Also works as a context manager.
-
-    """
-
-    enable = False
-
-    def __init__(self, name):
-        self.name = name
-
-    def __call__(self, prefix, *args):
-        """Prints a log message."""
-
-        if self.enable:
-            msg = ("%s %s " %
-               (self.name, prefix) +
-                " ".join((repr(arg) for arg in args)))
-            print(msg, file=sys.stderr)
-        else:
-            return self
-
-    def trace(self, *args):
-        if self.enable:
-            return self.Tracer(self, args)
-        else:
-            return self
-
-    def __enter__(self, *args):
-        """Dummy context manager interface when logging is disabled"""
-        pass
-
-    def __exit__(self, *args):
-        """Dummy context manager interface when logging is disabled"""
-        pass
-
-    class Tracer(object):
-        """Context manager logging."""
-        def __init__(self, logger, args):
-            self.logger = logger
-            self.args = args
-
-        def __enter__(self, *unused):
-            self.logger("enter:")
-
-        def __exit__(self, *unused):
-            self.logger("exit:")
-
-
-class Token(object):
-
-    def __init__(self, source, line, index):
-        self.source = source
-        self.value = self.parse(source)
-        self.line = line
-        self.index = index
-        self.transform = None
-
-    def update_transform(self, transform):
-        self.transform = transform
-
-    def endswith(self, x):
-        return self.source.endswith(x)
-
-    def startswith(self, x):
-        return self.source.startswith(x)
-
-    def __eq__(self, other):
-        return self.value == other
-
-    def update(self, value):
-        self.value = value
-        self.source = str(value)
-
-    def __hash__(self):
-        return hash(self.source)
-
-    @classmethod
-    def parse(cls, token):
-        try:
-            return int(token)
-        except:
-            try:
-                return float(token)
-            except:
-                return token
-
-
 class Debuger(object):
 
-    trace = Logger("Editor:")
     status_bar_height = 20.5
     vm_gutter_width = 125.5
     code_gutter_width = 350.5
@@ -158,8 +65,6 @@ class Debuger(object):
         self.prog = compile(open(self.path, "r").read(), self.path, "exec")
 
     def run(self, cr, origin, scale, window_size):
-        self.trace("run:")
-
         window = Rect.from_top_left(Point(0, 0), window_size.x, window_size.y)
 
         (remainder, status_bar) = window\
@@ -225,7 +130,7 @@ class Debuger(object):
 
 
     def handle_key_event(self, event):
-        self.trace("handle_key_event")
+        pass
 
     def handle_button_press(self, event):
         pass
@@ -309,5 +214,4 @@ if __name__ == "__main__":
         print("A path to a valid python script is required.")
     else:
         import traceback
-        Logger.enable = False
         gui()
