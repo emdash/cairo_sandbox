@@ -341,7 +341,8 @@ class Debuger(object):
                         'Box': Box,
                         'Point': Point,
                         'Rect': Rect,
-                        'window': Rect.from_top_left(Point(0, 0), content.width, content.height)
+                        'window': Rect.from_top_left(Point(0, 0), content.width, content.height),
+                        'scale_mm': scale
                     })
             except Exception as e:
                 error = e
