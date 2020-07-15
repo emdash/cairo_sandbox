@@ -1,0 +1,19 @@
+- Make the parameters widgets way less ugly
+ - fix spacing, fonts, and alignment
+- Put the script file names into the window title bars
+- Make inotify optional
+- Add a screenshot command, which saves the current canvas out to .png
+- Add zoom feature
+- Add a way to explicitly set canvas size
+ - Scrolling activated when it no longer fits
+ - Allow zooming with mouse wheel
+- Add hot-key for reloading, for systems that don't support inotify
+- Finsh implementing all the parameter widgets
+- Do something way better for presenting errors
+- Add a fullscreen mode
+- Add toglable source-view
+ - Syntax highlighting?
+ - Automatically show errors
+ - Optionally, allow editing script from within the app
+- Support emacs / vim debugger protocols for script debugging
+- Suggest some geometry libraries which provide useful features
