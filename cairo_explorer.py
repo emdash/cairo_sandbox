@@ -99,6 +99,7 @@ class Debuger(object):
                     {
                         'cr': cr,
                         'cairo': cairo,
+                        'math': math,
                         'window': Rect.from_top_left(Point(0, 0), content.width, content.height),
                         'scale_mm': scale,
                         'helpers': helpers,

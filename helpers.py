@@ -180,7 +180,7 @@ class Parameter(object):
         given = type(value)
         if given not in allowed_types:
             raise TypeError("Expected one of %s, got %r." % (
-                [repr(r) for t in allowed_types].join(","),
+                ", ".join(repr(t) for t in allowed_types),
                 given
             ))
 
@@ -193,22 +193,50 @@ class Parameter(object):
 
 class NumericParameter(Parameter):
 
-    def __init__(self, lower=None, upper=None, default=None):
-        allowed = {int, float, long, complex, None}
+    def __init__(self, lower=0, upper=1, step=1/128, default=0.5):
+        allowed = {int, float, complex, type(None)}
         self.require(lower, allowed)
         self.require(upper, allowed)
         self.require(default, allowed)
         self.lower = lower
         self.upper = upper
-        self.value = default
+        self.step = step
+        self.default = default
+
+    def makeWidget(self):
+        self.adjustment = Gtk.Adjustment(
+            self.default,
+            self.lower,
+            self.upper,
+            self.step)
+        if self.lower is not None and self.upper is not None:
+            self.widget = Gtk.Scale.new(Gtk.Orientation.HORIZONTAL, self.adjustment)
+            self.widget.set_draw_value(True)
+        else:
+            self.widget = Gtk.SpinButton.new(self.adjustment, self.step / 4, 3)
+
+        self.widget.show()
+        return self.widget
+
+    def getValue(self):
+        return self.adjustment.get_value()
 
 
 # TBD: images, gradients, stipples, etc.
 class ColorParameter(Parameter):
 
     def __init__(self, default=None):
-        self.require(default, {None, cairo.SolidPattern})
+        self.require(default, {type(None), cairo.SolidPattern})
         self.value = default
+
+    def makeWidget(self):
+        self.widget = Gtk.ColorButton()
+        return self.widget
+
+    def getValue(self):
+        gdk_color = self.widget.get_color()
+        r, g, b = gdk_color.to_floats()
+        return cairo.SolidPattern(r, g, b, self.widget.get_alpha())
 
 
 class TextParameter(Parameter):
