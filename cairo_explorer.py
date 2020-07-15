@@ -33,13 +33,14 @@ from gi.repository import GObject
 from gi.repository import Gtk
 from gi.repository import Gdk
 
-from helpers import Point, Rect, Save, Box
+from helpers import Point, Rect, Save, Box, ParameterGroup
 import cairo
 import helpers
 import json
 import math
 import pyinotify
 import threading
+import traceback
 from queue import Queue
 import sys
 import time
@@ -52,17 +53,33 @@ class Debuger(object):
     code_gutter_width = 350.5
     token_length = 55.0
 
-    def __init__(self, reader):
+    def __init__(self, reader, param_container):
         self.allowable = []
         self.transform = None
         self.reader = reader
         self.reader.start()
         self.path = sys.argv[1]
         self.prog = None
+        self.param_container = param_container
         self.load()
+        self.param_container.show_all()
 
     def load(self):
+        self.params = helpers.ParameterGroup()
         self.prog = compile(open(self.path, "r").read(), self.path, "exec")
+        try:
+            exec(self.prog, {
+                '__name__': 'init',
+                'params': self.params,
+                'Numeric': helpers.NumericParameter,
+                'Text': helpers.TextParameter,
+                'Color': helpers.ColorParameter,
+            })
+        except Exception as e:
+            traceback.print_exc()
+            self.params.logError(e)
+
+        self.params.makeWidgets(self.param_container)
 
     def run(self, cr, origin, scale, window_size):
         window = Rect.from_top_left(Point(0, 0), window_size.x, window_size.y)
@@ -84,10 +101,14 @@ class Debuger(object):
                         'cairo': cairo,
                         'window': Rect.from_top_left(Point(0, 0), content.width, content.height),
                         'scale_mm': scale,
-                        'helpers': helpers
+                        'helpers': helpers,
+                        '__name__': 'render',
+                        'params': self.params.getValues()
                     })
             except Exception as e:
-                error = e
+                traceback.print_exc()
+                # This needs to be better.
+                error = traceback.format_exc()
 
             self.transform = cr.get_matrix()
             self.inverse_transform = cr.get_matrix()
@@ -126,6 +147,7 @@ class Debuger(object):
 
         if error is not None:
             with Box(cr, status_bar) as layout:
+                cr.move_to(*layout.west())
                 cr.show_text(repr(error))
 
 
@@ -191,12 +213,21 @@ def gui():
         finally:
             return True
 
+    # Parameters Window
+    parameters_window = Gtk.Window()
+    parameters = Gtk.ListBox()
+    sw = Gtk.ScrolledWindow()
+    parameters_window.add(sw)
+    sw.add(parameters)
+    parameters_window.show_all()
+    parameters_window.set_size_request(320, 480)
 
+
+    # Debugger Window
+    # XXX: use Gtk paint clock, not this ad-hoc nonsense
     GObject.timeout_add(25, update)
-
-    debuger = Debuger(ReaderThread())
+    debuger = Debuger(ReaderThread(), parameters)
     notify_thread(debuger)
-
     window = Gtk.Window()
     window.set_size_request(640, 480)
     da = Gtk.DrawingArea()
@@ -207,11 +238,12 @@ def gui():
     da.connect('draw', draw)
     window.connect('key-press-event', key_press)
     window.connect('button-press-event', button_press)
+
     Gtk.main()
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("A path to a valid python script is required.")
     else:
-        import traceback
         gui()

@@ -16,7 +16,17 @@
 # License along with this program.  If not, see
 # <https://www.gnu.org/licenses/>.
 
+from collections import OrderedDict
+import cairo
 import math
+
+
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_foreign("cairo")
+from gi.repository import GObject
+from gi.repository import Gtk
+from gi.repository import Gdk
 
 
 class Point(object):
@@ -160,3 +170,117 @@ class Box(object):
 
     def __exit__(self, unused1, unused2, unused3):
         self.cr.restore()
+
+
+class Parameter(object):
+
+    """A uniform interface for creating named parameters"""
+
+    def require(self, value, allowed_types):
+        given = type(value)
+        if given not in allowed_types:
+            raise TypeError("Expected one of %s, got %r." % (
+                [repr(r) for t in allowed_types].join(","),
+                given
+            ))
+
+    def makeWidget(self):
+        raise NotImplementedError()
+
+    def getValue(self):
+        raise NotImplementedError()
+
+
+class NumericParameter(Parameter):
+
+    def __init__(self, lower=None, upper=None, default=None):
+        allowed = {int, float, long, complex, None}
+        self.require(lower, allowed)
+        self.require(upper, allowed)
+        self.require(default, allowed)
+        self.lower = lower
+        self.upper = upper
+        self.value = default
+
+
+# TBD: images, gradients, stipples, etc.
+class ColorParameter(Parameter):
+
+    def __init__(self, default=None):
+        self.require(default, {None, cairo.SolidPattern})
+        self.value = default
+
+
+class TextParameter(Parameter):
+
+    def __init__(self, default=None):
+        self.require(default, {str, None})
+        self.value = default
+        self.widget = None
+
+    def makeWidget(self):
+        self.widget = Gtk.TextView()
+        if self.value is not None:
+            self.widget.get_buffer().set_text(self.value)
+        self.widget.show()
+        self.widget.set_editable(True)
+        return self.widget
+
+    def getValue(self):
+        buf = self.widget.get_buffer()
+        return buf.get_text(buf.get_start_iter(), buf.get_end_iter(), True)
+
+
+class TableParameter(Parameter):
+
+    def __init__(self, row_type, default=None):
+        self.require(row_type, {list, tuple})
+        for item in row_type:
+            self.require(item, {str, int, float, long, Point, Color})
+        self.row_type = row_type
+        self.value = default
+
+
+class PointParam(Parameter):
+
+    def __init__(self, default=None):
+        self.require(default, {Point, None})
+        self.value = default
+
+
+class AngleParameter(Parameter):
+
+    """Special-case of NumericParameter with wrapping range between 0 - 2pi.
+    """
+
+    def __init__(self, default=None):
+        self.require(default, {float, None})
+        self.value = default
+
+
+class ParameterGroup(object):
+
+    def __init__(self):
+        self.params = OrderedDict()
+        self.error = None
+
+    def define(self, name, param):
+        if name in self.params:
+            raise ValueError("Parameter %s already defined" % name)
+        self.params[name] = param
+
+    def makeWidgets(self, container):
+        for name, param in self.params.items():
+            print(name, param)
+            row = Gtk.ListBoxRow()
+            row.set_header(Gtk.Label(name))
+            widget = param.makeWidget()
+            row.add(widget)
+            container.add(row)
+
+    def getValues(self):
+        return {name: param.getValue()
+                for name, param in self.params.items()}
+
+    def logError(self, error):
+        self.error = error
