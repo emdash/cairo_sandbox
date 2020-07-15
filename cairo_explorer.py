@@ -74,6 +74,13 @@ class Debuger(object):
                 'Numeric': helpers.NumericParameter,
                 'Text': helpers.TextParameter,
                 'Color': helpers.ColorParameter,
+                'Font': helpers.FontParameter,
+                'Table': helpers.TableParameter,
+                'Angle': helpers.AngleParameter,
+                'Point': helpers.PointParameter,
+                'Image': helpers.ImageParameter,
+                'Script': helpers.ScriptParameter,
+                'Custom': helpers.CustomParameter
             })
         except Exception as e:
             traceback.print_exc()
@@ -100,6 +107,7 @@ class Debuger(object):
                         'cr': cr,
                         'cairo': cairo,
                         'math': math,
+                        'stdin': self.reader.env,
                         'window': Rect.from_top_left(Point(0, 0), content.width, content.height),
                         'scale_mm': scale,
                         'helpers': helpers,

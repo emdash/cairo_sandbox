@@ -29,6 +29,54 @@ from gi.repository import Gtk
 from gi.repository import Gdk
 
 
+class Helper(object):
+
+    """Provide useful methods not available in the standard cairo API.""".
+
+    def __init__(self, cr):
+        self.cr = cr
+
+    def circle(self, center, radius):
+        self.cr.arc(center.x, center.y, radius, 0, 2 * math.py)
+
+    def center_rect(self, center, w, h):
+        self.cr.rectangle(center.x - 0.5 * w, center.y - 0.5 * h, w, h)
+
+    def center_round_rect(self, center, w, h):
+        raise NotImplementedError()
+
+    def rect(self, rect):
+        self.center_rect(rect.center, rect.width, rect.height)
+
+    def round_rect(self, rect):
+        self.round_rect(rect.center, rect.width, rect.height)
+
+    def moveto(self, point):
+        self.cr.moveto(*point)
+
+    def lineto(self, point):
+        self.cr.lineto(*point)
+
+    def curveto(self, a, b, c):
+        self.cr.curveto(a.x, a.y, b.x, b.y, c.x, c.y)
+
+    def polygon(self, *points, close=True):
+        self.moveto(points[0])
+        for point in points:
+            self.lineto(point)
+        if close:
+            self.cr.close()
+
+    def curve(self, close=False, *points):
+        raise NotImplementedError()
+
+    def save(self):
+        return Save(self.cr)
+
+    def box(self, rect):
+        return Box(self.cr, rect)
+
+
 class Point(object):
 
     """Reasonably terse 2D Point class."""
@@ -174,11 +222,11 @@ class Box(object):
 
 class Parameter(object):
 
-    """A uniform interface for creating named parameters"""
+    """A uniform interface for creating named parameters."""
 
     def require(self, value, allowed_types):
         given = type(value)
-        if given not in allowed_types:
+        if not any(isinstance(value, t) for t in allowed_types):
             raise TypeError("Expected one of %s, got %r." % (
                 ", ".join(repr(t) for t in allowed_types),
                 given
@@ -192,6 +240,8 @@ class Parameter(object):
 
 
 class NumericParameter(Parameter):
+
+    """A scalar numeric value, with a finite range."""
 
     def __init__(self, lower=0, upper=1, step=1/128, default=0.5):
         allowed = {int, float, complex, type(None)}
@@ -225,6 +275,8 @@ class NumericParameter(Parameter):
 # TBD: images, gradients, stipples, etc.
 class ColorParameter(Parameter):
 
+    """An RGBA Color value."""
+
     def __init__(self, r=0, g=0, b=0, a=1.0):
         self.default = (r, g, b, a)
         self.require(r, {int, float})
@@ -244,6 +296,8 @@ class ColorParameter(Parameter):
 
 class TextParameter(Parameter):
 
+    """An arbitrary text string."""
+
     def __init__(self, default=None):
         self.require(default, {str, None})
         self.value = default
@@ -262,7 +316,19 @@ class TextParameter(Parameter):
         return buf.get_text(buf.get_start_iter(), buf.get_end_iter(), True)
 
 
+class FontParameter(Parameter):
+
+    """An easy way to chose a specific font."""
+
+    def __init__(self, default=None):
+        self.require(default, {str, None})
+        self.value = default
+        self.widget = None
+
+
 class TableParameter(Parameter):
+
+    """An arbitrary of values, which may themelves be tuples."""
 
     def __init__(self, row_type, default=None):
         self.require(row_type, {list, tuple})
@@ -274,6 +340,8 @@ class TableParameter(Parameter):
 
 class PointParam(Parameter):
 
+    """An (x,y) pair, returned as a helpers.Point instance."""
+
     def __init__(self, default=None):
         self.require(default, {Point, None})
         self.value = default
@@ -281,15 +349,82 @@ class PointParam(Parameter):
 
 class AngleParameter(Parameter):
 
-    """Special-case of NumericParameter with wrapping range between 0 - 2pi.
-    """
+    """A numeric value clamped between 0 and 2 * math.pi."""
 
     def __init__(self, default=None):
         self.require(default, {float, None})
         self.value = default
 
 
+class InfiniteParameter(Parameter):
+
+    """A scalar value that is not constrained to a finite interval."""
+
+    def __init__(self, default):
+        self.require(default, {float, int, None})
+        self.value = default
+
+
+class ToggleParameter(Parameter):
+
+    """A parameter representing a binary choice."""
+
+    def __init__(self, default):
+        self.require(default, {bool})
+        self.default = default
+
+
+class ChoiceParameter(Parameter):
+
+    """A parameter representing a choice of alternatives.
+    """
+
+    def __init__(self, alternatives, default):
+        # XXX: should be any seq
+        self.require(alternatives, {tuple, list, map})
+        self.alternatives = alternatives
+
+
+class ImageParameter(Parameter):
+
+    """A convenient way to load an image from disk.
+
+    If loading succeeds, the will be converted to a cairo.ImagePattern.
+    """
+
+    def __init__(self, alternatives, default):
+        # XXX: should be any seq
+        self.require(alternatives, {tuple, list, map})
+        self.alternatives = alternatives
+
+
+class ScriptParameter(Parameter):
+
+    """A convenient way to select a child script from disk.
+
+    This allows delegating a portion of the image to another script.
+
+    If the file exists, it will be loaded and compiled to a
+    `helpers.ChildScript` object. Any parameters required by the
+    script will be visible in a separate parameter window.
+
+    You can render the script into the current context by calling
+    `render()` on the parameter object.
+
+    If `stdin` is None, then stdin will be will be automatically
+    available in the child script as well, otherwise stdin must be a
+    `dict` containing any values the child script requires.
+    """
+
+    def __init__(self, default=None, stdin=None):
+        # XXX: should be any seq
+        self.require(default, {str})
+        self.require(stdin, {dict})
+
+
 class ParameterGroup(object):
+
+    """Manages the parameters required by your script."""
 
     def __init__(self):
         self.params = OrderedDict()
