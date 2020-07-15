@@ -216,6 +216,7 @@ def gui():
 
     # Parameters Window
     parameters_window = Gtk.Window()
+    parameters_window.set_border_width(12)
     parameters = Gtk.ListBox()
     sw = Gtk.ScrolledWindow()
     parameters_window.add(sw)

@@ -225,12 +225,15 @@ class NumericParameter(Parameter):
 # TBD: images, gradients, stipples, etc.
 class ColorParameter(Parameter):
 
-    def __init__(self, default=None):
-        self.require(default, {type(None), cairo.SolidPattern})
-        self.value = default
+    def __init__(self, r=0, g=0, b=0, a=1.0):
+        self.default = (r, g, b, a)
+        self.require(r, {int, float})
+        self.require(g, {int, float})
+        self.require(b, {int, float})
+        self.require(a, {int, float})
 
     def makeWidget(self):
-        self.widget = Gtk.ColorButton()
+        self.widget = Gtk.ColorButton.new_with_rgba(Gdk.RGBA(*self.default))
         return self.widget
 
     def getValue(self):
@@ -300,10 +303,11 @@ class ParameterGroup(object):
     def makeWidgets(self, container):
         for name, param in self.params.items():
             print(name, param)
+            box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=6)
+            box.pack_start(Gtk.Label(name), False, False, 12)
+            box.pack_end(param.makeWidget(), True, True, 12)
             row = Gtk.ListBoxRow()
-            row.set_header(Gtk.Label(name))
-            widget = param.makeWidget()
-            row.add(widget)
+            row.add(box)
             container.add(row)
 
     def getValues(self):
