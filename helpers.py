@@ -232,7 +232,7 @@ class Parameter(object):
         if not isinstance(value, allowed_types):
             raise TypeError("Expected one of %s, got %r." % (
                 ", ".join(repr(t) for t in allowed_types),
-                given
+                value
             ))
 
 
@@ -260,8 +260,8 @@ class AngleParameter(Parameter):
 
     """A numeric value clamped between 0 and 2 * math.pi."""
 
-    def __init__(self, default=None):
-        self.require(default, (float, None))
+    def __init__(self, default=0):
+        self.require(default, (int, float))
         self.default = default
 
 
@@ -270,10 +270,74 @@ class ChoiceParameter(Parameter):
     """A parameter representing a choice of alternatives.
     """
 
-    def __init__(self, alternatives, default):
+    def __init__(self, alternatives, default, with_entry=False):
         # XXX: should be any seq
-        self.require(alternatives, (tuple, list, map))
+        self.require(alternatives, (tuple, list, dict))
+        self.require(with_entry, bool)
         self.alternatives = alternatives
+
+        if not default in alternatives:
+            raise ValueError("Default must be one of the alternatives")
+
+        self.with_entry = with_entry
+
+        # Type checking for the dict case
+        if isinstance(alternatives, dict):
+            items = iter(alternatives.values())
+            t = type(items.__next__())
+            self.value_col = 0
+
+            for key in alternatives:
+                self.require(key, str)
+
+            if not all(isinstance(v, t) for v in items):
+                raise TypeError("All alternatives must be the same type")
+
+            print(t)
+
+            self.store = Gtk.ListStore(str)
+
+            for (i, (k, v)) in enumerate(alternatives.items()):
+                self.store.append([k])
+                if k == default:
+                    self.default_row = i
+        else:
+            self.value_col = 1
+            t = type(alternatives[0])
+
+            if not all(isinstance(v, t) for v in alternatives):
+                raise TypeError("All alternatives must be the same type")
+
+            self.store = Gtk.ListStore(t, int)
+
+            for i, item in enumerate(alternatives):
+                self.store.append((item, i))
+                if item == default:
+                    self.default_row = i
+
+    def makeWidget(self):
+        if self.with_entry:
+            self.widget = Gtk.ComboBox.new_with_entry()
+            self.widget.set_entry_text_column(0)
+        else:
+            self.widget = Gtk.ComboBox.new()
+            cr = Gtk.CellRendererText()
+            self.widget.pack_start(cr, True)
+            self.widget.add_attribute(cr, "text", 0)
+        self.widget.set_model(self.store)
+        self.widget.set_active(self.default_row)
+
+        return self.widget
+
+    def getValue(self):
+        i = self.widget.get_active_iter()
+        if i is not None:
+            if isinstance(self.alternatives, dict):
+                return self.alternatives[self.store[i][self.value_col]]
+            else:
+                return self.alternatives[self.store[i][self.value_col]]
+        else:
+            return None
 
 
 # TBD: images, gradients, stipples, etc.
