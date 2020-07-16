@@ -37,7 +37,7 @@ class Helper(object):
         self.cr = cr
 
     def circle(self, center, radius):
-        self.cr.arc(center.x, center.y, radius, 0, 2 * math.py)
+        self.cr.arc(center.x, center.y, radius, 0, 2 * math.pi)
 
     def center_rect(self, center, w, h):
         self.cr.rectangle(center.x - 0.5 * w, center.y - 0.5 * h, w, h)
@@ -51,19 +51,19 @@ class Helper(object):
     def round_rect(self, rect):
         self.round_rect(rect.center, rect.width, rect.height)
 
-    def moveto(self, point):
-        self.cr.moveto(*point)
+    def move_to(self, point):
+        self.cr.move_to(*point)
 
-    def lineto(self, point):
-        self.cr.lineto(*point)
+    def line_to(self, point):
+        self.cr.line_to(*point)
 
-    def curveto(self, a, b, c):
-        self.cr.curveto(a.x, a.y, b.x, b.y, c.x, c.y)
+    def curve_to(self, a, b, c):
+        self.cr.curve_to(a.x, a.y, b.x, b.y, c.x, c.y)
 
     def polygon(self, *points, close=True):
-        self.moveto(points[0])
+        self.move_to(points[0])
         for point in points:
-            self.lineto(point)
+            self.line_to(point)
         if close:
             self.cr.close()
 
@@ -73,8 +73,8 @@ class Helper(object):
     def save(self):
         return Save(self.cr)
 
-    def box(self, rect):
-        return Box(self.cr, rect)
+    def box(self, rect, clip=True):
+        return Box(self.cr, rect, clip)
 
 
 class Point(object):
@@ -232,10 +232,10 @@ class Parameter(object):
             ))
 
     def makeWidget(self):
-        raise NotImplementedError()
+        return Gtk.Label("Not Implemented")
 
     def getValue(self):
-        raise NotImplementedError()
+        return self.default
 
 
 class NumericParameter(Parameter):
@@ -300,7 +300,7 @@ class TextParameter(Parameter):
     def __init__(self, default=None, multiline=False):
         self.require(default, (str, None))
         self.require(multiline, bool)
-        self.value = default
+        self.default = default
         self.multiline = multiline
         self.widget = None
 
@@ -308,14 +308,14 @@ class TextParameter(Parameter):
         if self.multiline:
             self.widget = Gtk.TextView()
 
-            if self.value is not None:
-                self.widget.get_buffer().set_text(self.value)
+            if self.default is not None:
+                self.widget.get_buffer().set_text(self.default)
                 self.widget.show()
                 self.widget.set_editable(True)
         else:
             self.widget = Gtk.Entry.new()
-            if self.value is not None:
-                self.widget.set_text(self.value)
+            if self.default is not None:
+                self.widget.set_text(self.default)
 
         return self.widget
 
@@ -333,7 +333,7 @@ class FontParameter(Parameter):
 
     def __init__(self, default=None):
         self.require(default, (str, None))
-        self.value = default
+        self.default = default
         self.widget = None
 
 
@@ -346,7 +346,7 @@ class TableParameter(Parameter):
         for item in row_type:
             self.require(item, (str, int, float, long, Point, Color))
         self.row_type = row_type
-        self.value = default
+        self.default = default
 
 
 class PointParameter(Parameter):
@@ -355,7 +355,7 @@ class PointParameter(Parameter):
 
     def __init__(self, default=None):
         self.require(default, (Point, None))
-        self.value = default
+        self.default = default
 
 
 class AngleParameter(Parameter):
@@ -364,7 +364,7 @@ class AngleParameter(Parameter):
 
     def __init__(self, default=None):
         self.require(default, (float, None))
-        self.value = default
+        self.default = default
 
 
 class InfiniteParameter(Parameter):
@@ -373,7 +373,7 @@ class InfiniteParameter(Parameter):
 
     def __init__(self, default):
         self.require(default, (float, int, None))
-        self.value = default
+        self.default = default
 
 
 class ToggleParameter(Parameter):

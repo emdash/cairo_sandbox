@@ -104,7 +104,10 @@ class Debuger(object):
                         'stdin': self.reader.env,
                         'window': window,
                         'scale_mm': scale,
-                        'helpers': helpers,
+                        'helpers': helpers.Helper(cr),
+                        'Point': helpers.Point,
+                        'Rect': helpers.Rect,
+                        'time': time.time(),
                         '__name__': 'render',
                         'params': self.params.getValues()
                     })
