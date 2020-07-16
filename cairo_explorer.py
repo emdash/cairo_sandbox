@@ -71,16 +71,19 @@ class Debuger(object):
             exec(self.prog, {
                 '__name__': 'init',
                 'params': self.params,
-                'Numeric': helpers.NumericParameter,
-                'Text': helpers.TextParameter,
-                'Color': helpers.ColorParameter,
-                'Font': helpers.FontParameter,
-                'Table': helpers.TableParameter,
                 'Angle': helpers.AngleParameter,
-                'Point': helpers.PointParameter,
+                'Choice': helpers.ChoiceParameter,
+                'Color': helpers.ColorParameter,
+                'Custom': helpers.CustomParameter,
+                'Font': helpers.FontParameter,
                 'Image': helpers.ImageParameter,
+                'Infinite': helpers.InfiniteParameter,
+                'Numeric': helpers.NumericParameter,
+                'Point': helpers.PointParameter,
                 'Script': helpers.ScriptParameter,
-                'Custom': helpers.CustomParameter
+                'Table': helpers.TableParameter,
+                'Text': helpers.TextParameter,
+                'Toggle': helpers.ToggleParameter,
             })
         except Exception as e:
             traceback.print_exc()
