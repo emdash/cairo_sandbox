@@ -40,7 +40,7 @@ pipe it into cairo explorer, like so:
 
 See the `helpers` companion library, alongside this script.
 
-- `pycairo`: *TBD link to pycairo docs*
+- `pycairo`: https://pycairo.readthedocs.io/en/latest/getting_started.html
 
 ## Modes
 

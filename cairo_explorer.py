@@ -70,6 +70,7 @@ class Debuger(object):
         try:
             exec(self.prog, {
                 '__name__': 'init',
+                'cairo': cairo,
                 'params': self.params,
                 'Angle': helpers.AngleParameter,
                 'Choice': helpers.ChoiceParameter,
