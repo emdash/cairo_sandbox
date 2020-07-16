@@ -31,7 +31,7 @@ from gi.repository import Gdk
 
 class Helper(object):
 
-    """Provide useful methods not available in the standard cairo API.""".
+    """Provide useful methods not available in the standard cairo API."""
 
     def __init__(self, cr):
         self.cr = cr
@@ -225,8 +225,7 @@ class Parameter(object):
     """A uniform interface for creating named parameters."""
 
     def require(self, value, allowed_types):
-        given = type(value)
-        if not any(isinstance(value, t) for t in allowed_types):
+        if not isinstance(value, allowed_types):
             raise TypeError("Expected one of %s, got %r." % (
                 ", ".join(repr(t) for t in allowed_types),
                 given
@@ -244,7 +243,7 @@ class NumericParameter(Parameter):
     """A scalar numeric value, with a finite range."""
 
     def __init__(self, lower=0, upper=1, step=1/128, default=0.5):
-        allowed = {int, float, complex, type(None)}
+        allowed = (int, float, complex, None)
         self.require(lower, allowed)
         self.require(upper, allowed)
         self.require(default, allowed)
@@ -279,10 +278,10 @@ class ColorParameter(Parameter):
 
     def __init__(self, r=0, g=0, b=0, a=1.0):
         self.default = (r, g, b, a)
-        self.require(r, {int, float})
-        self.require(g, {int, float})
-        self.require(b, {int, float})
-        self.require(a, {int, float})
+        self.require(r, (int, float))
+        self.require(g, (int, float))
+        self.require(b, (int, float))
+        self.require(a, (int, float))
 
     def makeWidget(self):
         self.widget = Gtk.ColorButton.new_with_rgba(Gdk.RGBA(*self.default))
@@ -299,7 +298,7 @@ class TextParameter(Parameter):
     """An arbitrary text string."""
 
     def __init__(self, default=None):
-        self.require(default, {str, None})
+        self.require(default, (str, None))
         self.value = default
         self.widget = None
 
@@ -321,7 +320,7 @@ class FontParameter(Parameter):
     """An easy way to chose a specific font."""
 
     def __init__(self, default=None):
-        self.require(default, {str, None})
+        self.require(default, (str, None))
         self.value = default
         self.widget = None
 
@@ -331,19 +330,19 @@ class TableParameter(Parameter):
     """An arbitrary of values, which may themelves be tuples."""
 
     def __init__(self, row_type, default=None):
-        self.require(row_type, {list, tuple})
+        self.require(row_type, (list, tuple))
         for item in row_type:
-            self.require(item, {str, int, float, long, Point, Color})
+            self.require(item, (str, int, float, long, Point, Color))
         self.row_type = row_type
         self.value = default
 
 
-class PointParam(Parameter):
+class PointParameter(Parameter):
 
     """An (x,y) pair, returned as a helpers.Point instance."""
 
     def __init__(self, default=None):
-        self.require(default, {Point, None})
+        self.require(default, (Point, None))
         self.value = default
 
 
@@ -352,7 +351,7 @@ class AngleParameter(Parameter):
     """A numeric value clamped between 0 and 2 * math.pi."""
 
     def __init__(self, default=None):
-        self.require(default, {float, None})
+        self.require(default, (float, None))
         self.value = default
 
 
@@ -361,7 +360,7 @@ class InfiniteParameter(Parameter):
     """A scalar value that is not constrained to a finite interval."""
 
     def __init__(self, default):
-        self.require(default, {float, int, None})
+        self.require(default, (float, int, None))
         self.value = default
 
 
@@ -370,7 +369,7 @@ class ToggleParameter(Parameter):
     """A parameter representing a binary choice."""
 
     def __init__(self, default):
-        self.require(default, {bool})
+        self.require(default, bool)
         self.default = default
 
 
@@ -381,7 +380,7 @@ class ChoiceParameter(Parameter):
 
     def __init__(self, alternatives, default):
         # XXX: should be any seq
-        self.require(alternatives, {tuple, list, map})
+        self.require(alternatives, (tuple, list, map))
         self.alternatives = alternatives
 
 
@@ -394,7 +393,7 @@ class ImageParameter(Parameter):
 
     def __init__(self, alternatives, default):
         # XXX: should be any seq
-        self.require(alternatives, {tuple, list, map})
+        self.require(alternatives, (tuple, list, map))
         self.alternatives = alternatives
 
 
@@ -418,8 +417,8 @@ class ScriptParameter(Parameter):
 
     def __init__(self, default=None, stdin=None):
         # XXX: should be any seq
-        self.require(default, {str})
-        self.require(stdin, {dict})
+        self.require(default, str)
+        self.require(stdin, dict)
 
 
 class CustomParameter(Parameter):
