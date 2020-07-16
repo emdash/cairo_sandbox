@@ -96,8 +96,10 @@ class Debuger(object):
         window = Rect.from_top_left(Point(0, 0),
                                     window_size.x, window_size.y)
         with Save(cr):
-            # create a new vm instance with the window as the target.
             error = None
+
+            # Trap all errors for the script, so we can display them
+            # nicely.
             try:
                 exec(
                     self.prog,
