@@ -3,6 +3,9 @@
 - Preserve parameter values across reloads
 - Add a way to reset all parameters to the deaults
  - And individually
+- Show the current mouse coordnates
+ - click copies the point to the clipboard as text
+- Add toggle controls for all the feedback and UI chrome we might add
 - Put the script file names into the window title bars
 - Make inotify optional
 - Add a screenshot command, which saves the current canvas out to .png
@@ -20,3 +23,7 @@
  - Optionally, allow editing script from within the app
 - Support emacs / vim debugger protocols for script debugging
 - Suggest some geometry libraries which provide useful features
+- For Gtk developers, provide hooks into the theme engine
+- For science / math users, provide an easy way to plot in arbitrary
+  cartesian coordinate windows in a resolution-independent way.
+  - nice grid lines, etc.
