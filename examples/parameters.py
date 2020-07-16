@@ -29,6 +29,9 @@ if __name__ == "init":
              "Best": cairo.Antialias.BEST
             },
             "Default"))
+
+    params.define("image",
+                  Image(cairo.SolidPattern(0, 0, 0)))
 else:
     cr.set_antialias(params["antialias"])
     cr.select_font_face(params["font"])
@@ -37,6 +40,10 @@ else:
 
     shape = params["shape"]
     radius = params["radius"]
+
+    cr.set_source(params["image"])
+    helpers.center_rect(Point(100, 300), 100, 100)
+    cr.fill()
 
     # this is the official cairo API for saves and restores.
     cr.save()

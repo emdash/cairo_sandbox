@@ -23,3 +23,4 @@
 - For science / math users, provide an easy way to plot in arbitrary
   cartesian coordinate windows in a resolution-independent way.
   - nice grid lines, etc.
+- Use Pango for text

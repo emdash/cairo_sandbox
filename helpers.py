@@ -19,6 +19,7 @@
 from collections import OrderedDict
 import cairo
 import math
+import traceback
 
 
 import gi
@@ -410,10 +411,34 @@ class ImageParameter(Parameter):
     If loading succeeds, the will be converted to a cairo.ImagePattern.
     """
 
-    def __init__(self, alternatives, default):
-        # XXX: should be any seq
-        self.require(alternatives, (tuple, list, map))
-        self.alternatives = alternatives
+    def __init__(self, default=None):
+        # Default can be a fallback pattern, or a path to an image.
+        self.require(default, (str, cairo.Pattern, type(None)))
+        self.default = default
+        self.value = default
+
+    def makeWidget(self):
+        self.widget = Gtk.FileChooserButton().new(
+            "Choose Image",
+            Gtk.FileChooserAction.OPEN)
+
+        if isinstance(self.default, str):
+            self.widget.select_filename(default)
+
+        self.widget.connect("file-set", self.update)
+        return self.widget
+
+    def update(self, *unused):
+        path = self.widget.get_filename()
+        try:
+            self.value = cairo.SurfacePattern(
+                cairo.ImageSurface.create_from_png(path))
+        except BaseException:
+            traceback.print_exc()
+            self.value = self.default
+
+    def getValue(self):
+        return self.value
 
 
 class InfiniteParameter(Parameter):
