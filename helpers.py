@@ -460,6 +460,14 @@ class ToggleParameter(Parameter):
         self.require(default, bool)
         self.default = default
 
+    def makeWidget(self):
+        self.widget = Gtk.CheckButton()
+        self.widget.set_active(True)
+        return self.widget
+
+    def getValue(self):
+        return self.widget.get_active()
+
 
 class ParameterGroup(object):
 
