@@ -422,6 +422,15 @@ class ScriptParameter(Parameter):
         self.require(stdin, {dict})
 
 
+class CustomParameter(Parameter):
+
+    """A parameter that YOU have implemented."""
+
+    def __init__(self, path):
+        self.require(path, str)
+        self.path = str
+
+
 class ParameterGroup(object):
 
     """Manages the parameters required by your script."""

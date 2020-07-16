@@ -78,6 +78,7 @@ under a short ailias.
 - `Choice`
 - `Image`
 - `Script`
+- `Custom`
 
 ### Render Mode
 

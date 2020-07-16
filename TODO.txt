@@ -1,5 +1,8 @@
 - Make the parameters widgets way less ugly
  - fix spacing, fonts, and alignment
+- Preserve parameter values across reloads
+- Add a way to reset all parameters to the deaults
+ - And individually
 - Put the script file names into the window title bars
 - Make inotify optional
 - Add a screenshot command, which saves the current canvas out to .png
