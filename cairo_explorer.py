@@ -89,14 +89,8 @@ class Debuger(object):
         self.params.makeWidgets(self.param_container)
 
     def run(self, cr, origin, scale, window_size):
-        window = Rect.from_top_left(Point(0, 0), window_size.x, window_size.y)
-
-        (remainder, status_bar) = window\
-            .split_horizontal(window.height - self.status_bar_height)
-
-        (content, vm_gutter) = remainder\
-            .split_vertical(window.width - self.vm_gutter_width)
-
+        window = Rect.from_top_left(Point(0, 0),
+                                    window_size.x, window_size.y)
         with Save(cr):
             # create a new vm instance with the window as the target.
             error = None
@@ -108,15 +102,13 @@ class Debuger(object):
                         'cairo': cairo,
                         'math': math,
                         'stdin': self.reader.env,
-                        'window': Rect.from_top_left(Point(0, 0), content.width, content.height),
+                        'window': window,
                         'scale_mm': scale,
                         'helpers': helpers,
                         '__name__': 'render',
                         'params': self.params.getValues()
                     })
             except Exception as e:
-                traceback.print_exc()
-                # This needs to be better.
                 error = traceback.format_exc()
 
             self.transform = cr.get_matrix()
@@ -144,20 +136,14 @@ class Debuger(object):
             cr.line_to(0, 5)
             cr.stroke()
 
-        # draw gutters around UI
-        with Save(cr):
-            cr.set_line_width(1.0)
-            cr.move_to(*content.southwest())
-            cr.rel_line_to(window.width, 0)
-            cr.move_to(*vm_gutter.northwest())
-            cr.line_to(*vm_gutter.southwest())
-            cr.rel_line_to(0, -content.height)
-            cr.stroke()
-
         if error is not None:
-            with Box(cr, status_bar) as layout:
-                cr.move_to(*layout.west())
-                cr.show_text(repr(error))
+            with Box(cr, window.inset(10), clip=False) as layout:
+                cr.set_source_rgba(1.0, 0.0, 0.0, 0.5)
+                cr.move_to(*layout.northwest())
+                for line in error.split('\n'):
+                    cr.show_text(line)
+                    cr.translate(0, 10)
+                    cr.move_to(*layout.northwest())
 
 
     def handle_key_event(self, event):

@@ -3,8 +3,8 @@ if __name__ == "init":
     params.define("multiline", Text(default="foo\nbar", multiline=True))
     params.define("fill", Color(r=1.0))
     params.define("stroke", Color())
-    params.define("radius", Numeric(0, 50, 1, 5))
-    params.define("line_width", Numeric(0, 10, 1, 0))
+    params.define("radius", Numeric(0, 100, 1, 10))
+    params.define("line_width", Numeric(0, 20, 1, 2))
 else:
     (x,y) = window.center
     cr.arc(x, y, params["radius"], 0, math.pi * 2)

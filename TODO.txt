@@ -12,7 +12,6 @@
  - Allow zooming with mouse wheel
 - Add hot-key for reloading, for systems that don't support inotify
 - Finsh implementing all the parameter widgets
-- Do something way better for presenting errors
 - Add a fullscreen mode
 - Add toglable source-view
  - Syntax highlighting?
