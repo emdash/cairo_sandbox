@@ -224,21 +224,18 @@ def gui():
 
     # Parameters Window
     parameters_window = Gtk.Window()
-    parameters_window.set_border_width(12)
-    parameters = Gtk.ListBox()
-    sw = Gtk.ScrolledWindow()
-    parameters_window.add(sw)
-    sw.add(parameters)
-    parameters_window.show_all()
+    parameters_window.set_title("Parameters: " + sys.argv[1])
     parameters_window.set_size_request(320, 480)
-
+    parameters_window.show()
 
     # Debugger Window
     # XXX: use Gtk paint clock, not this ad-hoc nonsense
     GObject.timeout_add(25, update)
-    debuger = Debuger(ReaderThread(), parameters)
+    debuger = Debuger(ReaderThread(), parameters_window)
     notify_thread(debuger)
+
     window = Gtk.Window()
+    window.set_title("Preview: " + sys.argv[1])
     window.set_size_request(640, 480)
     da = Gtk.DrawingArea()
     da.set_events(Gdk.EventMask.ALL_EVENTS_MASK)

@@ -297,22 +297,34 @@ class TextParameter(Parameter):
 
     """An arbitrary text string."""
 
-    def __init__(self, default=None):
+    def __init__(self, default=None, multiline=False):
         self.require(default, (str, None))
+        self.require(multiline, bool)
         self.value = default
+        self.multiline = multiline
         self.widget = None
 
     def makeWidget(self):
-        self.widget = Gtk.TextView()
-        if self.value is not None:
-            self.widget.get_buffer().set_text(self.value)
-        self.widget.show()
-        self.widget.set_editable(True)
+        if self.multiline:
+            self.widget = Gtk.TextView()
+
+            if self.value is not None:
+                self.widget.get_buffer().set_text(self.value)
+                self.widget.show()
+                self.widget.set_editable(True)
+        else:
+            self.widget = Gtk.Entry.new()
+            if self.value is not None:
+                self.widget.set_text(self.value)
+
         return self.widget
 
     def getValue(self):
-        buf = self.widget.get_buffer()
-        return buf.get_text(buf.get_start_iter(), buf.get_end_iter(), True)
+        if self.multiline:
+            buf = self.widget.get_buffer()
+            return buf.get_text(buf.get_start_iter(), buf.get_end_iter(), True)
+        else:
+            return self.widget.get_text()
 
 
 class FontParameter(Parameter):
@@ -444,14 +456,34 @@ class ParameterGroup(object):
         self.params[name] = param
 
     def makeWidgets(self, container):
+        listbox = Gtk.ListBox()
+        self.size_group = Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL)
+
         for name, param in self.params.items():
-            print(name, param)
-            box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=6)
-            box.pack_start(Gtk.Label(name), False, False, 12)
-            box.pack_end(param.makeWidget(), True, True, 12)
             row = Gtk.ListBoxRow()
+            box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=6)
+            label = Gtk.Label.new("<b><tt>%s</tt></b>" % name)
+            widget = param.makeWidget()
+
+            box.show()
+            box.set_border_width(5)
             row.add(box)
-            container.add(row)
+
+            label.show()
+            label.set_use_markup(True)
+            label.set_justify(Gtk.Justification.LEFT)
+            box.pack_start(label, False, True, 12)
+
+            self.size_group.add_widget(label)        
+            box.pack_end(widget, True, True, 12)
+            listbox.add(row)
+
+        for child in container.get_children():
+            child.destroy()
+
+        container.add(listbox)
+        container.show_all()
+        self.listbox = listbox
 
     def getValues(self):
         return {name: param.getValue()
