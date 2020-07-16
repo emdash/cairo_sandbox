@@ -293,8 +293,6 @@ class ChoiceParameter(Parameter):
             if not all(isinstance(v, t) for v in items):
                 raise TypeError("All alternatives must be the same type")
 
-            print(t)
-
             self.store = Gtk.ListStore(str)
 
             for (i, (k, v)) in enumerate(alternatives.items()):
@@ -370,14 +368,39 @@ class CustomParameter(Parameter):
         self.require(path, str)
         self.path = str
 
+
 class FontParameter(Parameter):
 
     """An easy way to chose a specific font."""
 
-    def __init__(self, default=None):
-        self.require(default, (str, None))
+    # TBD: When we support Pango for text, revisit this control.
+
+    def __init__(self, default="monospace", use_pango=False):
+        self.require(default, (str, type(None)))
+        self.require(use_pango, bool)
+        if (use_pango):
+            raise NotImplementedError()
+        self.use_pango = use_pango
         self.default = default
+        self.value = default
         self.widget = None
+
+    def makeWidget(self):
+        if self.default is not None:
+            self.widget = Gtk.FontButton.new_with_font(self.default)
+        else:
+            self.widget = Gtk.FontButton.new()
+        self.widget.set_use_font(True)
+        self.widget.set_use_size(False)
+        self.widget.set_show_size(False)
+        self.widget.connect("font-set", self.update)
+        return self.widget
+
+    def update(self, *unused):
+        self.value = self.widget.get_font().split()[0]
+
+    def getValue(self):
+        return self.value
 
 
 class ImageParameter(Parameter):

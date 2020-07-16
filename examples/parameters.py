@@ -1,4 +1,5 @@
 if __name__ == "init":
+    params.define("font", Font("monospace"))
     params.define("text", Text(default="foo"))
     params.define("multiline", Text(default="foo\nbar", multiline=True))
     params.define("fill", Color(r=1.0))
@@ -30,6 +31,8 @@ if __name__ == "init":
             "Default"))
 else:
     cr.set_antialias(params["antialias"])
+    cr.select_font_face(params["font"])
+    cr.set_font_size(24)
     (x,y) = window.center
 
     shape = params["shape"]
