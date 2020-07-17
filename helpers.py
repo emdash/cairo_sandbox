@@ -587,14 +587,27 @@ class ParameterGroup(object):
 
     def __init__(self):
         self.params = OrderedDict()
-        self.error = None
+        self.resolution = None
 
     def define(self, name, param):
+        """Define a new parameter for later use in the a user script."""
+
         if name in self.params:
             raise ValueError("Parameter %s already defined" % name)
         self.params[name] = param
 
     def makeWidgets(self, container):
+        """Create a widget for each parameter, adding them into `container`.
+
+        All of the widgets are added to a child container. If
+        container alrady contains widget, it will be removed.
+
+        Currently this means that all the existing widgets will lose
+        their values, but since we cannot know that the set of
+        paramers has not changed, this is the simplest and sanest
+        approach.
+
+        """
         listbox = Gtk.ListBox()
         self.size_group = Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL)
 
@@ -625,8 +638,18 @@ class ParameterGroup(object):
         self.listbox = listbox
 
     def getValues(self):
+        """Get the current value for each parameter, as dict."""
         return {name: param.getValue()
                 for name, param in self.params.items()}
 
-    def logError(self, error):
-        self.error = error
+    def setResolution(self, x, y):
+        """Set the resolution of the drawing area.
+
+        This will be used in a subsequent `set_size_request_call` on
+        the underlying output widget.
+
+        This method doesn't really belong in this class, but it is the
+        most convenient place to put it for the time being.
+
+        """
+        self.resolution = x, y

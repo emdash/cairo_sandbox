@@ -53,7 +53,7 @@ class Debuger(object):
     code_gutter_width = 350.5
     token_length = 55.0
 
-    def __init__(self, reader, param_container):
+    def __init__(self, reader, param_container, widget):
         self.allowable = []
         self.transform = None
         self.reader = reader
@@ -61,8 +61,10 @@ class Debuger(object):
         self.path = sys.argv[1]
         self.prog = None
         self.param_container = param_container
-        self.load()
         self.param_container.show_all()
+        self.load_error = None
+        self.widget = widget
+        self.load()
 
     def load(self):
         self.params = helpers.ParameterGroup()
@@ -88,9 +90,12 @@ class Debuger(object):
             })
         except Exception as e:
             traceback.print_exc()
-            self.params.logError(e)
+            self.load_error = e
 
         self.params.makeWidgets(self.param_container)
+        if self.params.resolution is not None:
+            self.widget.set_size_request(0, 0)
+            self.widget.set_size_request(*self.params.resolution)
 
     def run(self, cr, origin, scale, window_size):
         window = Rect.from_top_left(Point(0, 0),
@@ -201,7 +206,6 @@ def gui():
         screen = Point(float(alloc.width), float(alloc.height))
         origin = screen * 0.5
         scale = dpi(widget)
-
         # excute the program
         debuger.run(cr, origin, scale, screen)
 
@@ -220,16 +224,11 @@ def gui():
     # Parameters Window
     parameters_window = Gtk.Window()
     parameters_window.set_title("Parameters: " + sys.argv[1])
-    parameters_window.set_size_request(320, 480)
     parameters_window.show()
-
-    # Debugger Window
-    debuger = Debuger(ReaderThread(), parameters_window)
-    notify_thread(debuger)
 
     window = Gtk.Window()
     window.set_title("Preview: " + sys.argv[1])
-    window.set_size_request(640, 480)
+    window.set_size_request(320, 240)
     da = Gtk.DrawingArea()
     da.set_events(Gdk.EventMask.ALL_EVENTS_MASK)
     window.add(da)
@@ -240,6 +239,9 @@ def gui():
     window.connect('key-press-event', key_press)
     window.connect('button-press-event', button_press)
 
+    # Debugger Window
+    debuger = Debuger(ReaderThread(), parameters_window, da)
+    notify_thread(debuger)
     Gtk.main()
 
 
