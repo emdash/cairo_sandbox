@@ -29,7 +29,7 @@ from __future__ import print_function
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_foreign("cairo")
-from gi.repository import GObject
+from gi.repository import GLib
 from gi.repository import Gtk
 from gi.repository import Gdk
 
@@ -175,7 +175,7 @@ class ReaderThread(threading.Thread):
 def notify_thread(debuger):
 
     def modified(*unused, **unused2):
-        GObject.idle_add(debuger.load)
+        GLib.idle_add(debuger.load)
 
     wm = pyinotify.WatchManager()
     wm.add_watch(sys.argv[1], pyinotify.IN_MODIFY)
@@ -211,7 +211,7 @@ def gui():
     def button_press(widget, event):
         debuger.handle_button_press(event)
 
-    def update():
+    def update(*unused):
         try:
             da.queue_draw()
         finally:
@@ -224,8 +224,6 @@ def gui():
     parameters_window.show()
 
     # Debugger Window
-    # XXX: use Gtk paint clock, not this ad-hoc nonsense
-    GObject.timeout_add(25, update)
     debuger = Debuger(ReaderThread(), parameters_window)
     notify_thread(debuger)
 
@@ -238,6 +236,7 @@ def gui():
     window.show_all()
     window.connect("destroy", Gtk.main_quit)
     da.connect('draw', draw)
+    da.add_tick_callback(update)
     window.connect('key-press-event', key_press)
     window.connect('button-press-event', button_press)
 

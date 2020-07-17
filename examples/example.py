@@ -13,9 +13,9 @@ else:
     phase_separation = speed / params["n_waves"]
     
     def starburst(phase):
-        with helpers.Box(cr, window) as layout:
+        with helpers.box(window) as layout:
             for i in range(stars):
-                with helpers.Save(cr):
+                with helpers.save():
                     cr.rotate(i * angle + phase)
                     cr.arc(phase * radius, 0, 10, 0, 2 * math.pi)
                     cr.fill()
