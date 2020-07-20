@@ -47,26 +47,23 @@ else:
 
     # this is the official cairo API for saves and restores.
     cr.save()
+    cr.translate(x, y)
     cr.rotate(params["angle"])
     if shape == "Circle":
-        cr.arc(x, y, params["radius"], 0, math.pi * 2)
+        helpers.circle(Point(0,0), params["radius"])
     elif shape == "Square":
-        helpers.center_rect(Point(x,y), radius, radius)
+        helpers.center_rect(Point(0,0), radius, radius)
     elif shape == "Triangle":
-        # This is our context manager save, which is exception-safe.
         with helpers.save():
-            cr.translate(x, y)
+            cr.move_to(radius, 0)
 
-            with helpers.save():
-                cr.move_to(radius, 0)
+        with helpers.save():
+            cr.rotate(2 * math.pi / 3)
+            cr.line_to(radius, 0)
 
-            with helpers.save():
-                cr.rotate(2 * math.pi / 3)
-                cr.line_to(radius, 0)
-
-            with helpers.save():
-                cr.rotate(-2 * math.pi / 3)
-                cr.line_to(radius, 0)
+        with helpers.save():
+            cr.rotate(-2 * math.pi / 3)
+            cr.line_to(radius, 0)
 
         cr.close_path()
 
@@ -79,8 +76,11 @@ else:
     cr.stroke()
 
     if params["show_text"]:
-        cr.move_to(*window.center)
-        cr.show_text(params["text"])
+        with helpers.save():
+            cr.translate(x, y)
+            cr.rotate(params["angle"])
+            cr.move_to(0, 0)
+            cr.show_text(params["text"])
 
         cr.move_to(window.center.x, 100)
         cr.show_text(params["multiline"])

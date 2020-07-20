@@ -18,6 +18,7 @@
 
 from collections import OrderedDict
 import cairo
+import cmath
 import math
 import traceback
 
@@ -132,7 +133,7 @@ class DragMove(CursorState):
         return DragMove(Point(event.x, event.y), self.origin)
 
     def dispatch(self, callbacks):
-        return callbacks.drag(callbacks)
+        return callbacks.drag(self)
 
 
 class DragController(object):
@@ -402,13 +403,93 @@ class Parameter(object):
         return self.default
 
 
-class AngleParameter(Parameter):
+class CustomParameter(Parameter):
+
+    """A parameter that YOU have implemented."""
+
+    value = None
+    saved_value = None
+    widget = None
+    label = None
+
+    def makeWidget(self):
+        self.widget = Gtk.DrawingArea()
+        self.widget.set_size_request(30, 30)
+        self.widget.set_events(Gdk.EventMask.EXPOSURE_MASK
+			 | Gdk.EventMask.LEAVE_NOTIFY_MASK
+			 | Gdk.EventMask.BUTTON_PRESS_MASK
+			 | Gdk.EventMask.BUTTON_RELEASE_MASK
+			 | Gdk.EventMask.POINTER_MOTION_MASK
+			 | Gdk.EventMask.POINTER_MOTION_HINT_MASK)
+        self.widget.connect('draw', self.draw)
+        self.dc = DragController(self.widget, self)
+        box = Gtk.Box(Gtk.Orientation.HORIZONTAL)
+        self.label = Gtk.Label(str(self.value))
+        box.pack_start(self.widget, False, False, 12)
+        box.pack_end(self.label, False, False, 12)
+        return box
+
+    def getValue(self):
+        raise NotImplementedError()
+
+    def updateValue(self, cursor):
+        raise NotImplementedError()
+
+    def draw(self, widget, cr):
+        raise NotImplementedError()
+
+    def hover(self, cursor):
+        pass
+
+    def begin(self, cursor):
+        self.saved_value = self.value
+        return True
+
+    def drag(self, cursor):
+        self.updateValue(cursor)
+        return True
+
+    def drop(self, cursor):
+        self.updateValue(cursor)
+        return True
+
+    def click(self, click):
+        return True
+
+
+class AngleParameter(CustomParameter):
 
     """A numeric value clamped between 0 and 2 * math.pi."""
 
-    def __init__(self, default=0):
-        self.require(default, (int, float))
+    def __init__(self, default, format="%.2f"):
+        self.require(default, (float, int, None))
         self.default = default
+        self.value = default
+        self.saved_value = default
+        self.format = format
+        self.widget = None
+        self.label = None
+
+    def getValue(self):
+        return self.value
+
+    def updateValue(self, cursor):
+        self.value = cmath.polar(complex(cursor.pos.x, cursor.pos.y))[1]
+        self.label.set_text(self.format % self.value)
+
+    def draw(self, widget, cr):
+        helper = Helper(cr)
+        alloc = self.widget.get_allocation()
+        window = Rect.from_top_left(Point(0, 0), alloc.width, alloc.height)
+
+        with helper.box(window.inset(5), clip=False) as bounds:
+            radius = min(bounds.width, bounds.height) * 0.5
+            helper.circle(bounds.center, radius)
+            cr.set_line_width(2.5)
+            cr.stroke()
+            cr.rotate(self.value)
+            helper.circle(Point(radius/2, 0), radius/4)
+            cr.fill()
 
 
 class ChoiceParameter(Parameter):
@@ -506,15 +587,6 @@ class ColorParameter(Parameter):
         return cairo.SolidPattern(r, g, b, self.widget.get_alpha())
 
 
-class CustomParameter(Parameter):
-
-    """A parameter that YOU have implemented."""
-
-    def __init__(self, path):
-        self.require(path, str)
-        self.path = str
-
-
 class FontParameter(Parameter):
 
     """An easy way to chose a specific font."""
@@ -586,7 +658,7 @@ class ImageParameter(Parameter):
         return self.value
 
 
-class InfiniteParameter(Parameter):
+class InfiniteParameter(CustomParameter):
 
     """A scalar value that is not constrained to a finite interval."""
 
@@ -599,23 +671,6 @@ class InfiniteParameter(Parameter):
         self.format = format
         self.widget = None
         self.label = None
-
-    def makeWidget(self):
-        self.widget = Gtk.DrawingArea()
-        self.widget.set_size_request(30, 30)
-        self.widget.set_events(Gdk.EventMask.EXPOSURE_MASK
-			 | Gdk.EventMask.LEAVE_NOTIFY_MASK
-			 | Gdk.EventMask.BUTTON_PRESS_MASK
-			 | Gdk.EventMask.BUTTON_RELEASE_MASK
-			 | Gdk.EventMask.POINTER_MOTION_MASK
-			 | Gdk.EventMask.POINTER_MOTION_HINT_MASK)
-        self.widget.connect('draw', self.draw)
-        self.dc = DragController(self.widget, self)
-        box = Gtk.Box(Gtk.Orientation.HORIZONTAL)
-        self.label = Gtk.Label(str(self.value))
-        box.pack_start(self.widget, False, False, 12)
-        box.pack_end(self.label, False, False, 12)
-        return box
 
     def getValue(self):
         return self.value
@@ -638,25 +693,6 @@ class InfiniteParameter(Parameter):
             cr.rotate(self.value)
             helper.circle(Point(radius/2, 0), radius/4)
             cr.fill()
-
-    def hover(self, cursor):
-        pass
-
-    def begin(self, cursor):
-        self.saved_value = self.value
-        return True
-
-    def drag(self, cursor):
-        self.updateValue(cursor)
-        return True
-
-    def drop(self, cursor):
-        self.updateValue(cursor)
-        return True
-
-    def click(self, click):
-        print('click')
-        return True
 
 
 class NumericParameter(Parameter):
