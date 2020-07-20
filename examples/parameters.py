@@ -5,7 +5,7 @@ if __name__ == "init":
     params.define("fill", Color(r=1.0))
     params.define("stroke", Color())
     params.define("radius", Numeric(0, 100, 1, 10))
-    params.define("line_width", Numeric(0, 20, 1, 2))
+    params.define("line_width", Infinite(1.0))
     params.define("show_text", Toggle(True))
     params.define("angle", Angle(0))
 
@@ -72,7 +72,6 @@ else:
 
     # heaven help you if you forget the matching restore()
     cr.restore()
-        
     cr.set_source(params["fill"])
     cr.fill_preserve()
     cr.set_line_width(params["line_width"])

@@ -33,7 +33,7 @@ from gi.repository import GLib
 from gi.repository import Gtk
 from gi.repository import Gdk
 
-from helpers import Point, Rect, Save, Box, ParameterGroup
+from helpers import DragController, Point, Rect, Save, Box, ParameterGroup
 import cairo
 import helpers
 import json
@@ -65,6 +65,7 @@ class Debuger(object):
         self.load_error = None
         self.widget = widget
         self.load()
+        self.dc = DragController(self.widget, self)
 
     def load(self):
         self.params = helpers.ParameterGroup()
@@ -97,6 +98,21 @@ class Debuger(object):
             self.widget.set_size_request(0, 0)
             self.widget.set_size_request(*self.params.resolution)
 
+    def hover(self, cursor):
+        pass
+
+    def begin(self, cursor):
+        pass
+
+    def drag(self, cursor):
+        pass
+
+    def drop(self, cursor):
+        pass
+
+    def click(self, cursor):
+        pass
+
     def run(self, cr, origin, scale, window_size):
         window = Rect.from_top_left(Point(0, 0),
                                     window_size.x, window_size.y)
@@ -119,6 +135,7 @@ class Debuger(object):
                         'Point': helpers.Point,
                         'Rect': helpers.Rect,
                         'time': time.time(),
+                        'cursor': self.dc.cursor,
                         '__name__': 'render',
                         'params': self.params.getValues()
                     })
@@ -159,12 +176,8 @@ class Debuger(object):
                     cr.translate(0, 10)
                     cr.move_to(*layout.northwest())
 
-
-    def handle_key_event(self, event):
-        pass
-
-    def handle_button_press(self, event):
-        pass
+    def key_press(self, event):
+        print("key")
 
 
 class ReaderThread(threading.Thread):
@@ -209,12 +222,6 @@ def gui():
         # excute the program
         debuger.run(cr, origin, scale, screen)
 
-    def key_press(widget, event):
-        debuger.handle_key_event(event)
-
-    def button_press(widget, event):
-        debuger.handle_button_press(event)
-
     def update(*unused):
         try:
             da.queue_draw()
@@ -236,11 +243,10 @@ def gui():
     window.connect("destroy", Gtk.main_quit)
     da.connect('draw', draw)
     da.add_tick_callback(update)
-    window.connect('key-press-event', key_press)
-    window.connect('button-press-event', button_press)
 
     # Debugger Window
     debuger = Debuger(ReaderThread(), parameters_window, da)
+
     notify_thread(debuger)
     Gtk.main()
 
