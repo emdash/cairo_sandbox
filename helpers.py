@@ -148,14 +148,25 @@ class DragController(object):
     some state at mouse-down which is preserved through the drag
     interaction.
 
+    `callbacks` is an object which provides the following methods:
+    - hover
+    - begin
+    - drag
+    - drop
+
     """
 
     def __init__(self, widget, callbacks):
         """Creates a DragController bound to `widget.`
         """
-        self.widget = widget
         self.callbacks = callbacks
         self.cursor = Hover(Point(0, 0))
+        widget.set_events(Gdk.EventMask.EXPOSURE_MASK
+		          | Gdk.EventMask.LEAVE_NOTIFY_MASK
+		          | Gdk.EventMask.BUTTON_PRESS_MASK
+		          | Gdk.EventMask.BUTTON_RELEASE_MASK
+		          | Gdk.EventMask.POINTER_MOTION_MASK
+		          | Gdk.EventMask.POINTER_MOTION_HINT_MASK)
         widget.connect('button-press-event', self.button_press)
         widget.connect('button-release-event', self.button_release)
         widget.connect('motion-notify-event', self.mouse_move)
@@ -163,17 +174,48 @@ class DragController(object):
     def button_press(self, widget, event):
         self.cursor = self.cursor.button_press(event)
         if self.cursor.dispatch(self.callbacks):
-            self.widget.queue_draw()
+            widget.queue_draw()
 
     def button_release(self, widget, event):
         self.cursor = self.cursor.button_release(event)
         if self.cursor.dispatch(self.callbacks):
-            self.widget.queue_draw()
+            widget.queue_draw()
 
     def mouse_move(self, widget, event):
         self.cursor = self.cursor.mouse_move(event)
         if self.cursor.dispatch(self.callbacks):
-            self.widget.queue_draw()
+            widget.queue_draw()
+
+
+# XXX: better name for this.
+class ValueController(object):
+
+    """A special-case of DragController which binds a single value.
+
+    Users should supply a pair of callbacks:
+
+    - begin(cursor): the drag is beginning, cached any state if necessary.
+    - updateValue(cursor): update the value based on current cursor state.
+    """
+
+    def __init__(self, widget, callbacks):
+        self.dc = DragController(widget, self)
+        self.callbacks = callbacks
+        self.begin = callbacks.begin
+
+    def hover(self, cursor):
+        pass
+
+    def drag(self, cursor):
+        self.callbacks.updateValue(cursor)
+        return True
+
+    def drop(self, cursor):
+        self.callbacks.updateValue(cursor)
+        return True
+
+    def click(self, click):
+        return True
 
 
 class Helper(object):
@@ -403,63 +445,13 @@ class Parameter(object):
         return self.default
 
 
-class CustomParameter(Parameter):
+class AngleParameter(Parameter):
 
-    """A parameter that YOU have implemented."""
+    """A numeric value clamped between 0 and 2 * math.pi.
 
-    value = None
-    saved_value = None
-    widget = None
-    label = None
-
-    def makeWidget(self):
-        self.widget = Gtk.DrawingArea()
-        self.widget.set_size_request(30, 30)
-        self.widget.set_events(Gdk.EventMask.EXPOSURE_MASK
-			 | Gdk.EventMask.LEAVE_NOTIFY_MASK
-			 | Gdk.EventMask.BUTTON_PRESS_MASK
-			 | Gdk.EventMask.BUTTON_RELEASE_MASK
-			 | Gdk.EventMask.POINTER_MOTION_MASK
-			 | Gdk.EventMask.POINTER_MOTION_HINT_MASK)
-        self.widget.connect('draw', self.draw)
-        self.dc = DragController(self.widget, self)
-        box = Gtk.Box(Gtk.Orientation.HORIZONTAL)
-        self.label = Gtk.Label(str(self.value))
-        box.pack_start(self.widget, False, False, 12)
-        box.pack_end(self.label, False, False, 12)
-        return box
-
-    def getValue(self):
-        raise NotImplementedError()
-
-    def updateValue(self, cursor):
-        raise NotImplementedError()
-
-    def draw(self, widget, cr):
-        raise NotImplementedError()
-
-    def hover(self, cursor):
-        pass
-
-    def begin(self, cursor):
-        self.saved_value = self.value
-        return True
-
-    def drag(self, cursor):
-        self.updateValue(cursor)
-        return True
-
-    def drop(self, cursor):
-        self.updateValue(cursor)
-        return True
-
-    def click(self, click):
-        return True
-
-
-class AngleParameter(CustomParameter):
-
-    """A numeric value clamped between 0 and 2 * math.pi."""
+    The value will be the angle between the mouse position at
+    mousedown and the current mouse position.
+    """
 
     def __init__(self, default, format="%.2f"):
         self.require(default, (float, int, None))
@@ -467,21 +459,36 @@ class AngleParameter(CustomParameter):
         self.value = default
         self.saved_value = default
         self.format = format
-        self.widget = None
         self.label = None
+        self.vc = None
+
+    def makeWidget(self):
+        widget = Gtk.DrawingArea()
+        widget.set_size_request(30, 30)
+        widget.connect('draw', self.draw)
+        self.vc = ValueController(widget, self)
+        self.label = Gtk.Label(str(self.value))
+        box = Gtk.Box(Gtk.Orientation.HORIZONTAL)
+        box.pack_start(widget, False, False, 12)
+        box.pack_end(self.label, False, False, 12)
+        return box
+
+    def begin(self, cursor):
+        self.saved_value = self.value
 
     def getValue(self):
         return self.value
 
     def updateValue(self, cursor):
-        self.value = cmath.polar(complex(cursor.pos.x, cursor.pos.y))[1]
+        # (ab)use complex built-in to compute the angle of the mouse.
+        angle = cmath.polar(complex(cursor.pos.x, cursor.pos.y))[1]
+        self.value = (angle + self.saved_value) % (2 * math.pi)
         self.label.set_text(self.format % self.value)
 
     def draw(self, widget, cr):
         helper = Helper(cr)
-        alloc = self.widget.get_allocation()
+        alloc = widget.get_allocation()
         window = Rect.from_top_left(Point(0, 0), alloc.width, alloc.height)
-
         with helper.box(window.inset(5), clip=False) as bounds:
             radius = min(bounds.width, bounds.height) * 0.5
             helper.circle(bounds.center, radius)
@@ -587,6 +594,12 @@ class ColorParameter(Parameter):
         return cairo.SolidPattern(r, g, b, self.widget.get_alpha())
 
 
+class CustomParameter(Parameter):
+    """A parameter that YOU have implemented."""
+
+    pass
+
+
 class FontParameter(Parameter):
 
     """An easy way to chose a specific font."""
@@ -658,7 +671,7 @@ class ImageParameter(Parameter):
         return self.value
 
 
-class InfiniteParameter(CustomParameter):
+class InfiniteParameter(Parameter):
 
     """A scalar value that is not constrained to a finite interval."""
 
@@ -669,22 +682,35 @@ class InfiniteParameter(CustomParameter):
         self.saved_value = default
         self.rate = rate
         self.format = format
-        self.widget = None
         self.label = None
+        self.vc = None
+
+    def makeWidget(self):
+        widget = Gtk.DrawingArea()
+        widget.set_size_request(30, 30)
+        widget.connect('draw', self.draw)
+        self.vc = ValueController(widget, self)
+        self.label = Gtk.Label(str(self.value))
+        box = Gtk.Box(Gtk.Orientation.HORIZONTAL)
+        box.pack_start(widget, False, False, 12)
+        box.pack_end(self.label, False, False, 12)
+        return box
+
+    def begin(self, cursor):
+        self.saved_value = self.value
 
     def getValue(self):
         return self.value
 
     def updateValue(self, cursor):
-        value = self.saved_value - self.rate * self.dc.cursor.rel.y
+        value = self.saved_value - self.rate * cursor.rel.y
         self.value = value
         self.label.set_text(self.format % value)
 
     def draw(self, widget, cr):
         helper = Helper(cr)
-        alloc = self.widget.get_allocation()
+        alloc = widget.get_allocation()
         window = Rect.from_top_left(Point(0, 0), alloc.width, alloc.height)
-
         with helper.box(window.inset(5), clip=False) as bounds:
             radius = min(bounds.width, bounds.height) * 0.5
             helper.circle(bounds.center, radius)
