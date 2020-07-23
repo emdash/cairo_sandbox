@@ -858,7 +858,7 @@ class ParameterGroup(object):
 
     def __init__(self):
         self.params = OrderedDict()
-        self.resolution = None
+        self.resolution = 640, 480
 
     def define(self, name, param):
         """Define a new parameter for later use in the a user script."""

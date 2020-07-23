@@ -46,30 +46,57 @@ import sys
 import time
 
 
-class Debuger(object):
+class Script(object):
 
-    status_bar_height = 20.5
-    vm_gutter_width = 125.5
-    code_gutter_width = 350.5
-    token_length = 55.0
+    """Loads and renders a script file."""
 
-    def __init__(self, reader, param_container, widget):
-        self.allowable = []
+    def __init__(self, path, reader):
         self.transform = None
         self.reader = reader
-        self.reader.start()
-        self.path = sys.argv[1]
-        self.prog = None
-        self.param_container = param_container
-        self.param_container.show_all()
         self.load_error = None
-        self.widget = widget
-        self.load()
-        self.dc = DragController(self.widget, self)
+        self.path = path
+        self.prog = None
+        self.param_container = None
+        self.dc = None
+        self.params = None
 
-    def load(self):
+    def update(self, widget, unused):
+        try:
+            widget.queue_draw()
+        finally:
+            return True
+
+    def dpi(self, widget):
+        """Return the dpi of the current monitor as a Point."""
+        s = widget.get_screen()
+        m = s.get_monitor_at_window(widget.get_window())
+        geom = s.get_monitor_geometry(m)
+        mm = Point(s.get_monitor_width_mm(m),
+                   s.get_monitor_height_mm(m))
+        size = Point(float(geom.width), float(geom.height))
+        return size / mm
+
+    def draw(self, widget, cr):
+        # get window / screen geometry
+        alloc = widget.get_allocation()
+        screen = Point(float(alloc.width), float(alloc.height))
+        origin = screen * 0.5
+        scale = self.dpi(widget)
+        # excute the program
+        self.run(cr, origin, scale, screen)
+
+    def makeRenderWidget(self):
+        da = Gtk.DrawingArea()
+        da.set_events(Gdk.EventMask.ALL_EVENTS_MASK)
+        da.connect('draw', self.draw)
+        da.add_tick_callback(self.update)
+        self.dc = DragController(da, self)
+        return da
+
+    def reload(self, container):
+        path = self.path
         self.params = helpers.ParameterGroup()
-        self.prog = compile(open(self.path, "r").read(), self.path, "exec")
+        self.prog = compile(open(path, "r").read(), path, "exec")
         try:
             exec(self.prog, {
                 '__name__': 'init',
@@ -93,10 +120,7 @@ class Debuger(object):
             traceback.print_exc()
             self.load_error = e
 
-        self.params.makeWidgets(self.param_container)
-        if self.params.resolution is not None:
-            self.widget.set_size_request(0, 0)
-            self.widget.set_size_request(*self.params.resolution)
+        self.params.makeWidgets(container)
 
     def hover(self, cursor):
         pass
@@ -190,69 +214,72 @@ class ReaderThread(threading.Thread):
             self.env = json.loads(sys.stdin.readline())
 
 
-def notify_thread(debuger):
+class FileWatcher(object):
 
-    def modified(*unused, **unused2):
-        GLib.idle_add(debuger.load)
+    """Fire a callback when the specified file changes."""
 
-    wm = pyinotify.WatchManager()
-    wm.add_watch(sys.argv[1], pyinotify.IN_MODIFY)
-    notifier = pyinotify.ThreadedNotifier(wm, modified)
-    notifier.daemon = True
-    notifier.start()
+    def __init__(self):
+        self.callbacks = {}
+        self.wm = pyinotify.WatchManager()
+        self.notifier = pyinotify.ThreadedNotifier(self.wm, self.modified)
+        self.notifier.daemon = True
+
+    def start(self):
+        self.notifier.start()
+
+    def watchFile(self, path, callback):
+        self.wm.add_watch(path, pyinotify.IN_MODIFY)
+        self.callbacks[path] = callback
+
+    def modified(self, event):
+        path = event.path
+        self.callbacks[path]()
 
 
-def gui():
-    def dpi(widget):
-        """Return the dpi of the current monitor as a Point."""
-        s = widget.get_screen()
-        m = s.get_monitor_at_window(window.get_window())
-        geom = s.get_monitor_geometry(m)
-        mm = Point(s.get_monitor_width_mm(m),
-                   s.get_monitor_height_mm(m))
-        size = Point(float(geom.width), float(geom.height))
-        return size / mm
+class GUI(object):
 
-    def draw(widget, cr):
-        # get window / screen geometry
-        alloc = widget.get_allocation()
-        screen = Point(float(alloc.width), float(alloc.height))
-        origin = screen * 0.5
-        scale = dpi(widget)
-        # excute the program
-        debuger.run(cr, origin, scale, screen)
+    """Singleton for the entire application."""
 
-    def update(*unused):
-        try:
-            da.queue_draw()
-        finally:
-            return True
+    fw = FileWatcher()
+    reader = ReaderThread()
 
-    # Parameters Window
-    parameters_window = Gtk.Window()
-    parameters_window.set_title("Parameters: " + sys.argv[1])
-    parameters_window.show()
+    @classmethod
+    def run(self):
+        self.fw.start()
+        self.reader.start()
+        Gtk.main()
 
-    window = Gtk.Window()
-    window.set_title("Preview: " + sys.argv[1])
-    window.set_size_request(320, 240)
-    da = Gtk.DrawingArea()
-    da.set_events(Gdk.EventMask.ALL_EVENTS_MASK)
-    window.add(da)
-    window.show_all()
-    window.connect("destroy", Gtk.main_quit)
-    da.connect('draw', draw)
-    da.add_tick_callback(update)
+    @classmethod
+    def runScript(self, path):
+        def reload():
+            script.reload(parameters)
+            da.set_size_request(*script.params.resolution)
+            render.set_default_size(*script.params.resolution)
 
-    # Debugger Window
-    debuger = Debuger(ReaderThread(), parameters_window, da)
+        script = Script(path, self.reader)
+        self.fw.watchFile(path, reload)
 
-    notify_thread(debuger)
-    Gtk.main()
+        render = Gtk.Window()
+        sw = Gtk.ScrolledWindow()
+        render.set_title("Render: " + sys.path[1])
+        render.add(sw)
+        da = script.makeRenderWidget()
+        sw.add(da)
+        render.connect("destroy", Gtk.main_quit)
+
+        parameters = Gtk.Window()
+        parameters.set_title("Parameters: " + sys.argv[1])
+        parameters.connect("destroy", Gtk.main_quit)
+
+        reload()
+        render.show_all()
+        parameters.show_all()
+
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("A path to a valid python script is required.")
     else:
-        gui()
+        GUI.runScript(sys.argv[1])
+        GUI.run()
