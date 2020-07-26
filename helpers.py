@@ -299,6 +299,11 @@ class Point(object):
     __truediv__  = binop(lambda a, b: a / b)
     __rtruediv__ = binop(lambda a, b: b / a)
 
+    @classmethod
+    def from_polar(cls, r, theta):
+        rect = cmath.rect(r, theta)
+        return Point(rect.real, rect.imag)
+
 
 class Rect(object):
 
