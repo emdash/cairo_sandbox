@@ -256,8 +256,11 @@ class GUI(object):
             da.set_size_request(*script.params.resolution)
             render.set_default_size(*script.params.resolution)
 
+        def on_change():
+            GLib.idle_add(reload)
+
         script = Script(path, self.reader)
-        self.fw.watchFile(path, reload)
+        self.fw.watchFile(path, on_change)
 
         render = Gtk.Window()
         sw = Gtk.ScrolledWindow()
