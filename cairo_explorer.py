@@ -135,7 +135,12 @@ class Script(object):
         pass
 
     def click(self, cursor):
-        pass
+        cb = Gtk.Clipboard.get_default(Gdk.Display.get_default())
+        cb.set_text(
+            "Point(%g, %g)" % (cursor.pos.x, cursor.pos.y),
+            -1
+        )
+        print(cursor.pos)
 
     def run(self, cr, origin, scale, window_size):
         window = Rect.from_top_left(Point(0, 0),
