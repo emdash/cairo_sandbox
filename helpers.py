@@ -697,12 +697,17 @@ class InfiniteParameter(Parameter):
         self.vc = None
 
     def makeWidget(self):
+        entry = Gtk.Entry()
+        # XXX: Hack alert
+        ParameterGroup.entry_group.add_widget(entry)
+
         widget = Gtk.DrawingArea()
         widget.set_size_request(30, 30)
         widget.connect('draw', self.draw)
         self.vc = ValueController(widget, self)
         self.label = Gtk.Label(str(self.value))
         box = Gtk.Box(Gtk.Orientation.HORIZONTAL)
+        box.pack_start(entry, False, False, 12)
         box.pack_start(widget, False, False, 12)
         box.pack_end(self.label, False, False, 12)
         return box
@@ -736,8 +741,8 @@ class NumericParameter(Parameter):
 
     """A scalar numeric value, with a finite range."""
 
-    def __init__(self, lower=0, upper=1, step=1/128, default=0.5):
-        allowed = (int, float, complex, None)
+    def __init__(self, lower, upper, step=1/128.0, default=0.5):
+        allowed = (int, float, complex)
         self.require(lower, allowed)
         self.require(upper, allowed)
         self.require(default, allowed)
@@ -745,6 +750,7 @@ class NumericParameter(Parameter):
         self.upper = upper
         self.step = step
         self.default = default
+        self.adjustment = None
 
     def makeWidget(self):
         self.adjustment = Gtk.Adjustment(
@@ -752,16 +758,20 @@ class NumericParameter(Parameter):
             self.lower,
             self.upper,
             self.step)
-        if self.lower is not None and self.upper is not None:
-            self.widget = Gtk.Scale.new(
-                Gtk.Orientation.HORIZONTAL,
-                self.adjustment)
-            self.widget.set_draw_value(True)
-        else:
-            self.widget = Gtk.SpinButton.new(self.adjustment, self.step / 4, 3)
+        scale = widget = Gtk.Scale.new(
+            Gtk.Orientation.HORIZONTAL,
+            self.adjustment)
+        scale.set_draw_value(True)
+        entry = Gtk.SpinButton.new(self.adjustment, self.step, 3)
 
-        self.widget.show()
-        return self.widget
+        # XXX: Hack alert
+        ParameterGroup.entry_group.add_widget(entry)
+
+        ret = Gtk.Box(Gtk.Orientation.HORIZONTAL)
+        ret.pack_start(entry, False, False, 12)
+        ret.pack_start(scale, True, True, 12)
+        ret.show()
+        return ret
 
     def getValue(self):
         return self.adjustment.get_value()
@@ -867,6 +877,8 @@ class ParameterGroup(object):
 
     """Manages the parameters required by your script."""
 
+    entry_group = None
+
     def __init__(self):
         self.params = OrderedDict()
         self.resolution = 640, 480
@@ -892,6 +904,15 @@ class ParameterGroup(object):
         """
         listbox = Gtk.ListBox()
         self.size_group = Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL)
+
+        # XXX: a bit of hack for widgets that want to coordinate
+        # sizing their left-most child widget.
+        #
+        # this is stored as a class property to avoid having to pass
+        # it down to makeWidget. It needs to be replaced with each
+        # generation of parameters to avoid leaking the widgets.
+        ParameterGroup.entry_group = Gtk.SizeGroup(
+            Gtk.SizeGroupMode.HORIZONTAL)
 
         for name, param in self.params.items():
             row = Gtk.ListBoxRow()
