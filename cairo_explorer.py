@@ -264,7 +264,7 @@ class GUI(object):
 
         render = Gtk.Window()
         sw = Gtk.ScrolledWindow()
-        render.set_title("Render: " + sys.path[1])
+        render.set_title("Render: " + sys.argv[1])
         render.add(sw)
         da = script.makeRenderWidget()
         sw.add(da)
