@@ -467,34 +467,46 @@ class AngleParameter(Parameter):
     def __init__(self, default, format="%.2f"):
         self.require(default, (float, int, None))
         self.default = default
-        self.value = default
+        self.adjustment = Gtk.Adjustment(
+            0,
+            0,
+            math.pi * 2,
+            1/3600.0)
         self.saved_value = default
+        self.adjustment.set_value(default)
         self.format = format
         self.label = None
         self.vc = None
 
     def makeWidget(self):
+        entry = Gtk.SpinButton.new(self.adjustment, 1/3600.0, 3)
+
+        # XXX: Hack alert
+        ParameterGroup.entry_group.add_widget(entry)
+
         widget = Gtk.DrawingArea()
         widget.set_size_request(30, 30)
         widget.connect('draw', self.draw)
         self.vc = ValueController(widget, self)
-        self.label = Gtk.Label(str(self.value))
+        self.label = Gtk.Label(str(self.adjustment.get_value()))
         box = Gtk.Box(Gtk.Orientation.HORIZONTAL)
+        box.pack_start(entry, False, False, 12)
         box.pack_start(widget, False, False, 12)
         box.pack_end(self.label, False, False, 12)
         return box
 
     def begin(self, cursor):
-        self.saved_value = self.value
+        self.saved_value = self.adjustment.get_value()
 
     def getValue(self):
-        return self.value
+        return self.adjustment.get_value()
 
     def updateValue(self, cursor):
         # (ab)use complex built-in to compute the angle of the mouse.
         angle = cmath.polar(complex(cursor.pos.x, cursor.pos.y))[1]
-        self.value = (angle + self.saved_value) % (2 * math.pi)
-        self.label.set_text(self.format % self.value)
+        value = (angle + self.saved_value) % (2 * math.pi)
+        self.adjustment.set_value(value)
+        self.label.set_text(self.format % value)
 
     def draw(self, widget, cr):
         helper = Helper(cr)
@@ -505,7 +517,7 @@ class AngleParameter(Parameter):
             helper.circle(bounds.center, radius)
             cr.set_line_width(2.5)
             cr.stroke()
-            cr.rotate(self.value)
+            cr.rotate(self.adjustment.get_value())
             helper.circle(Point(radius/2, 0), radius/4)
             cr.fill()
 
@@ -903,6 +915,8 @@ class ParameterGroup(object):
 
         """
         listbox = Gtk.ListBox()
+        listbox.set_selection_mode(Gtk.SelectionMode.NONE)
+
         self.size_group = Gtk.SizeGroup(Gtk.SizeGroupMode.HORIZONTAL)
 
         # XXX: a bit of hack for widgets that want to coordinate
