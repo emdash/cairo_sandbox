@@ -228,6 +228,12 @@ class Helper(object):
     def circle(self, center, radius):
         self.cr.arc(center.x, center.y, radius, 0, 2 * math.pi)
 
+    def elipse(self, center, width, height):
+        with self.save():
+            self.cr.translate(center.x, center.y)
+            self.cr.scale(1.0, height / width)
+            self.circle(Point(0, 0), width)
+
     def center_rect(self, center, w, h):
         self.cr.rectangle(center.x - 0.5 * w, center.y - 0.5 * h, w, h)
 
