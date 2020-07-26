@@ -116,7 +116,7 @@ class Script(object):
                 'Text': helpers.TextParameter,
                 'Toggle': helpers.ToggleParameter,
             })
-        except Exception as e:
+        except BaseException as e:
             traceback.print_exc()
             self.load_error = e
 
@@ -163,7 +163,7 @@ class Script(object):
                         '__name__': 'render',
                         'params': self.params.getValues()
                     })
-            except Exception as e:
+            except BaseException as e:
                 error = traceback.format_exc()
 
             self.transform = cr.get_matrix()
