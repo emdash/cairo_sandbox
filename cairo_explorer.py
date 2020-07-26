@@ -175,6 +175,7 @@ class Script(object):
 
         with Save(cr):
             # stroke any residual path for feedback
+            cr.set_operator(cairo.OPERATOR_DIFFERENCE)
             cr.set_source_rgb(1.0, 1.0, 1.0)
             cr.set_line_width(0.1)
             cr.stroke()
