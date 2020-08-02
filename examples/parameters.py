@@ -80,7 +80,7 @@ else:
             cr.translate(x, y)
             cr.rotate(params["angle"])
             cr.move_to(0, 0)
-            cr.show_text(params["text"])
+            helpers.center_text(params["text"])
 
         cr.move_to(window.center.x, 100)
-        cr.show_text(params["multiline"])
+        helpers.center_text(params["multiline"])

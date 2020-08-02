@@ -234,6 +234,14 @@ class Helper(object):
             self.cr.scale(1.0, height / width)
             self.circle(Point(0, 0), width)
 
+    def center_text(self, text):
+        _, _, tw, th, _, _ = self.cr.text_extents(text)
+        x, y = self.cr.get_current_point()
+        with self.save():
+            self.cr.translate(x - tw * 0.5, y + th * 0.5)
+            self.cr.move_to(0, 0)
+            self.cr.show_text(text)
+
     def center_rect(self, center, w, h):
         self.cr.rectangle(center.x - 0.5 * w, center.y - 0.5 * h, w, h)
 
