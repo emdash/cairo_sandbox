@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# cairo-explorer: Interactive sandbox for cairo graphics.
+# cairo-sandbox: Interactive sandbox for cairo graphics.
 #
 # Copyright (C) 2020  Brandon Lewis
 #

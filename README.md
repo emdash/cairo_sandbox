@@ -1,6 +1,6 @@
 # Readme
 
-*Cairo Explorer* is an interactive sandbox for the cairo vector
+*Cairo Sandbox* is an interactive sandbox for the cairo vector
 graphics library.
 
 Cairo is a wonderful library, but it can be hard to experiment with,
@@ -8,7 +8,7 @@ and it can be time-consuming to set up a context for
 experimentation. It can also be hard to reason about transforms
 without interactive feedback.
 
-*Cairo Explorer* Targeted at anyone who needs to do custom drawing
+*Cairo Sandbox* Targeted at anyone who needs to do custom drawing
 with cairo -- whether you're trying to develp a custom GTK Widget, or
 visualizations for. The goal is to quickly get you up-and-runing with
 a cairo context, then get out of your way while you hack.
@@ -27,12 +27,12 @@ and debugging drawing.
 
 # Usage
 
-Basic usage is as simple as: `./cairo_explorer <file>`
+Basic usage is as simple as: `./cairo_sandbox <file>`
 
 If you have a data source which can output JSON to `stdout`, you can
-pipe it into cairo explorer, like so:
+pipe it into cairo sandbox, like so:
 
-`my_json_source | ./cairo_explorer <file>`
+`my_json_source | ./cairo_sandbox <file>`
 
 **TBD** Add a more compelling example and demo of this feature.
 
