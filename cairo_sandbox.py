@@ -38,7 +38,8 @@ import cairo
 import helpers
 import json
 import math
-import pyinotify
+from watchdog.observers import Observer
+from watchdog.events import LoggingEventHandler
 import threading
 import traceback
 from queue import Queue
@@ -226,19 +227,20 @@ class FileWatcher(object):
 
     def __init__(self):
         self.callbacks = {}
-        self.wm = pyinotify.WatchManager()
-        self.notifier = pyinotify.ThreadedNotifier(self.wm, self.modified)
-        self.notifier.daemon = True
+        self.wm = LoggingEventHandler()
+        self.observer = Observer()
+        self.observer.daemon = True
 
     def start(self):
-        self.notifier.start()
+        self.observer.start()
 
     def watchFile(self, path, callback):
-        self.wm.add_watch(path, pyinotify.IN_MODIFY)
+        self.observer.schedule(self.wm, path, recursive=False)
+        self.observer.on_change = self.modified(path)
         self.callbacks[path] = callback
 
-    def modified(self, event):
-        path = event.path
+    def modified(self, path):
+        path = path
         self.callbacks[path]()
 
 
