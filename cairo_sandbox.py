@@ -45,7 +45,10 @@ import traceback
 from queue import Queue
 import sys
 import time
+import os
 
+# def on_any_event(event):
+#     print(event)
 
 class Script(object):
 
@@ -229,20 +232,29 @@ class FileWatcher(object):
         self.callbacks = {}
         self.wm = LoggingEventHandler()
         self.observer = Observer()
-        self.observer.daemon = True
+        #self.observer.daemon = True
 
     def start(self):
         self.observer.start()
 
     def watchFile(self, path, callback):
-        self.observer.schedule(self.wm, path, recursive=False)
-        self.observer.on_change = self.modified(path)
+        #dir = os.path.split(path)[0]
+        #file = os.path.split(path)[1]
+        #print(dir + "/")
+        #print(file)
+        #print(path)
+        self.observer.schedule(self.wm, "/Users/charlie/src/uDashStuff/cairo_sandbox/examples", recursive=True)
+        self.observer.on_any_event = on_any_event #self.modified
         self.callbacks[path] = callback
+        print(callback)
 
-    def modified(self, path):
-        path = path
+    def modified(self, firedPath):
+        print(self, firedPath)
+        path = firedPath
         self.callbacks[path]()
 
+    # def on_any_event(event):
+    #     print(event)
 
 class GUI(object):
 
