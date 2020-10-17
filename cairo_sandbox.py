@@ -238,6 +238,9 @@ class FileWatcher(object):
         self.observer.start()
 
     def watchFile(self, path, callback):
+        # unlike inotify, `watchdog` cannot watch a single file for
+        # changes directly. instead we must watch the parent directory
+        # for all events, and filter out the ones we don't care about.
         parent = os.path.split(path)[0]
         self.observer.schedule(self.ev_handler, parent, recursive=True)
         self.callbacks[path] = callback
