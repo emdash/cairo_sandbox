@@ -38,14 +38,22 @@ import cairo
 import helpers
 import json
 import math
-from watchdog.observers import Observer
-from watchdog.events import LoggingEventHandler
+import sys
 import threading
 import traceback
 from queue import Queue
-import sys
 import time
 import os
+
+try:
+    from watchdog.observers import Observer
+    from watchdog.events import LoggingEventHandler
+    HAVE_WATCHDOG=True
+except ImportError:
+    print(
+        "To enable auto-reload, please install `python3-watchdog`!",
+        file=sys.stderr)
+    HAVE_WATCHDOG=False
 
 # def on_any_event(event):
 #     print(event)
@@ -255,12 +263,14 @@ class GUI(object):
 
     """Singleton for the entire application."""
 
-    fw = FileWatcher()
+    if HAVE_WATCHDOG:
+        fw = FileWatcher()
     reader = ReaderThread()
 
     @classmethod
     def run(self):
-        self.fw.start()
+        if HAVE_WATCHDOG:
+            self.fw.start()
         self.reader.start()
         Gtk.main()
 
@@ -276,7 +286,8 @@ class GUI(object):
             GLib.idle_add(reload)
 
         script = Script(path, self.reader)
-        self.fw.watchFile(path, on_change)
+        if HAVE_WATCHDOG:
+            self.fw.watchFile(path, on_change)
 
         render = Gtk.Window()
         sw = Gtk.ScrolledWindow()
