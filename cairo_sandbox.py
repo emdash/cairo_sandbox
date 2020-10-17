@@ -218,9 +218,6 @@ class Script(object):
                     cr.translate(0, 10)
                     cr.move_to(*layout.northwest())
 
-    def key_press(self, event):
-        print("key")
-
 
 class ReaderThread(threading.Thread):
 
@@ -290,6 +287,10 @@ class GUI(object):
             self.fw.watchFile(path, on_change)
 
         render = Gtk.Window()
+
+        # quick hack to reload file on any keypress
+        render.connect('key-press-event', lambda *unused: reload())
+                
         sw = Gtk.ScrolledWindow()
         render.set_title("Render: " + sys.argv[1])
         render.add(sw)
