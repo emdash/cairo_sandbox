@@ -230,31 +230,23 @@ class FileWatcher(object):
 
     def __init__(self):
         self.callbacks = {}
-        self.wm = LoggingEventHandler()
+        self.ev_handler = LoggingEventHandler()
+        self.ev_handler.on_any_event = self.modified
         self.observer = Observer()
-        #self.observer.daemon = True
 
     def start(self):
         self.observer.start()
 
     def watchFile(self, path, callback):
-        #dir = os.path.split(path)[0]
-        #file = os.path.split(path)[1]
-        #print(dir + "/")
-        #print(file)
-        #print(path)
-        self.observer.schedule(self.wm, "/Users/charlie/src/uDashStuff/cairo_sandbox/examples", recursive=True)
-        self.observer.on_any_event = on_any_event #self.modified
+        parent = os.path.split(path)[0]
+        self.observer.schedule(self.ev_handler, parent, recursive=True)
         self.callbacks[path] = callback
-        print(callback)
 
-    def modified(self, firedPath):
-        print(self, firedPath)
-        path = firedPath
-        self.callbacks[path]()
+    def modified(self, event):
+        if event.event_type == "modified":
+            if event.src_path in self.callbacks:
+                self.callbacks[event.src_path]()
 
-    # def on_any_event(event):
-    #     print(event)
 
 class GUI(object):
 
@@ -272,6 +264,7 @@ class GUI(object):
     @classmethod
     def runScript(self, path):
         def reload():
+            print("reloading: " + path)
             script.reload(parameters)
             da.set_size_request(*script.params.resolution)
             render.set_default_size(*script.params.resolution)
@@ -281,6 +274,7 @@ class GUI(object):
 
         script = Script(path, self.reader)
         self.fw.watchFile(path, on_change)
+
 
         render = Gtk.Window()
         sw = Gtk.ScrolledWindow()
