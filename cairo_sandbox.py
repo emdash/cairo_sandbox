@@ -278,7 +278,6 @@ class GUI(object):
         script = Script(path, self.reader)
         self.fw.watchFile(path, on_change)
 
-
         render = Gtk.Window()
         sw = Gtk.ScrolledWindow()
         render.set_title("Render: " + sys.argv[1])
