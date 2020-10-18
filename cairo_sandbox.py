@@ -38,13 +38,25 @@ import cairo
 import helpers
 import json
 import math
-import pyinotify
+import sys
 import threading
 import traceback
 from queue import Queue
-import sys
 import time
+import os
 
+try:
+    from watchdog.observers import Observer
+    from watchdog.events import LoggingEventHandler
+    HAVE_WATCHDOG=True
+except ImportError:
+    print(
+        "To enable auto-reload, please install `python3-watchdog`!",
+        file=sys.stderr)
+    HAVE_WATCHDOG=False
+
+# def on_any_event(event):
+#     print(event)
 
 class Script(object):
 
@@ -206,9 +218,6 @@ class Script(object):
                     cr.translate(0, 10)
                     cr.move_to(*layout.northwest())
 
-    def key_press(self, event):
-        print("key")
-
 
 class ReaderThread(threading.Thread):
 
@@ -226,38 +235,46 @@ class FileWatcher(object):
 
     def __init__(self):
         self.callbacks = {}
-        self.wm = pyinotify.WatchManager()
-        self.notifier = pyinotify.ThreadedNotifier(self.wm, self.modified)
-        self.notifier.daemon = True
+        self.ev_handler = LoggingEventHandler()
+        self.ev_handler.on_any_event = self.modified
+        self.observer = Observer()
 
     def start(self):
-        self.notifier.start()
+        self.observer.start()
 
     def watchFile(self, path, callback):
-        self.wm.add_watch(path, pyinotify.IN_MODIFY)
+        # unlike inotify, `watchdog` cannot watch a single file for
+        # changes directly. instead we must watch the parent directory
+        # for all events, and filter out the ones we don't care about.
+        parent = os.path.split(path)[0]
+        self.observer.schedule(self.ev_handler, parent, recursive=True)
         self.callbacks[path] = callback
 
     def modified(self, event):
-        path = event.path
-        self.callbacks[path]()
+        if event.event_type == "modified":
+            if event.src_path in self.callbacks:
+                self.callbacks[event.src_path]()
 
 
 class GUI(object):
 
     """Singleton for the entire application."""
 
-    fw = FileWatcher()
+    if HAVE_WATCHDOG:
+        fw = FileWatcher()
     reader = ReaderThread()
 
     @classmethod
     def run(self):
-        self.fw.start()
+        if HAVE_WATCHDOG:
+            self.fw.start()
         self.reader.start()
         Gtk.main()
 
     @classmethod
     def runScript(self, path):
         def reload():
+            print("reloading: " + path)
             script.reload(parameters)
             da.set_size_request(*script.params.resolution)
             render.set_default_size(*script.params.resolution)
@@ -266,9 +283,14 @@ class GUI(object):
             GLib.idle_add(reload)
 
         script = Script(path, self.reader)
-        self.fw.watchFile(path, on_change)
+        if HAVE_WATCHDOG:
+            self.fw.watchFile(path, on_change)
 
         render = Gtk.Window()
+
+        # quick hack to reload file on any keypress
+        render.connect('key-press-event', lambda *unused: reload())
+                
         sw = Gtk.ScrolledWindow()
         render.set_title("Render: " + sys.argv[1])
         render.add(sw)

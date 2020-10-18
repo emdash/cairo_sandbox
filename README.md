@@ -103,8 +103,7 @@ Not necessary, not possible at the moment. Installation scripts are TBD.
 
 ## Dependencies
 
-Requires gobject introspection libraries for `Gtk`, `pycairo`. Auto
-reload `pyinotify`.
+Requires gobject introspection libraries for `Gtk`, `pycairo`. Automatic reloading requires `watchdog`.
 
 ## Debian
 
