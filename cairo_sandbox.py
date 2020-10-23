@@ -33,7 +33,10 @@ from gi.repository import GLib
 from gi.repository import Gtk
 from gi.repository import Gdk
 
-from helpers import DragController, Point, Rect, Save, Box, ParameterGroup
+from controller import DragController
+from helpers import Point, Rect, Save, Box
+import params.gtk as params
+
 import cairo
 import helpers
 import json
@@ -55,8 +58,6 @@ except ImportError:
         file=sys.stderr)
     HAVE_WATCHDOG=False
 
-# def on_any_event(event):
-#     print(event)
 
 class Script(object):
 
@@ -107,26 +108,26 @@ class Script(object):
 
     def reload(self, container):
         path = self.path
-        self.params = helpers.ParameterGroup()
+        self.params = params.ParameterGroup()
         self.prog = compile(open(path, "r").read(), path, "exec")
         try:
             exec(self.prog, {
                 '__name__': 'init',
                 'cairo': cairo,
                 'params': self.params,
-                'Angle': helpers.AngleParameter,
-                'Choice': helpers.ChoiceParameter,
-                'Color': helpers.ColorParameter,
-                'Custom': helpers.CustomParameter,
-                'Font': helpers.FontParameter,
-                'Image': helpers.ImageParameter,
-                'Infinite': helpers.InfiniteParameter,
-                'Numeric': helpers.NumericParameter,
-                'Point': helpers.PointParameter,
-                'Script': helpers.ScriptParameter,
-                'Table': helpers.TableParameter,
-                'Text': helpers.TextParameter,
-                'Toggle': helpers.ToggleParameter,
+                'Angle': params.AngleParameter,
+                'Choice': params.ChoiceParameter,
+                'Color': params.ColorParameter,
+                'Custom': params.CustomParameter,
+                'Font': params.FontParameter,
+                'Image': params.ImageParameter,
+                'Infinite': params.InfiniteParameter,
+                'Numeric': params.NumericParameter,
+                'Point': params.PointParameter,
+                'Script': params.ScriptParameter,
+                'Table': params.TableParameter,
+                'Text': params.TextParameter,
+                'Toggle': params.ToggleParameter,
             })
         except BaseException as e:
             traceback.print_exc()
