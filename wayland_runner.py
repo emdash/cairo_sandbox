@@ -1,6 +1,21 @@
 #!/usr/bin/python3
+# cairo-sandbox: Interactive sandbox for cairo graphics.
 #
-# Copyright 2020 Brandon Lewis
+# Copyright (C) 2020  Brandon Lewis
+#
+# This program is free software: you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public License
+# as published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program.  If not, see
+# <https://www.gnu.org/licenses/>.
 #
 # Heavily inspired by "surface.py" by Sean Vig, in the pywayland
 # examples directory. Adapted and expanded for this use-case.
@@ -10,6 +25,8 @@
 # - allow for window to automatically match the output resolution
 # - do we need explicit double buffering, or does wayland do this?
 # - damage region optimizations.
+
+"""Stand-alone runner for pywayland."""
 
 
 import math

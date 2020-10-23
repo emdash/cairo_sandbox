@@ -61,55 +61,19 @@ except ImportError:
 
 class Script(object):
 
-    """Loads and renders a script file."""
-
     def __init__(self, path, reader):
         self.transform = None
         self.reader = reader
         self.load_error = None
         self.path = path
         self.prog = None
-        self.param_container = None
         self.dc = None
         self.params = None
 
-    def update(self, widget, unused):
-        try:
-            widget.queue_draw()
-        finally:
-            return True
-
-    def dpi(self, widget):
-        """Return the dpi of the current monitor as a Point."""
-        s = widget.get_screen()
-        m = s.get_monitor_at_window(widget.get_window())
-        geom = s.get_monitor_geometry(m)
-        mm = Point(s.get_monitor_width_mm(m),
-                   s.get_monitor_height_mm(m))
-        size = Point(float(geom.width), float(geom.height))
-        return size / mm
-
-    def draw(self, widget, cr):
-        # get window / screen geometry
-        alloc = widget.get_allocation()
-        screen = Point(float(alloc.width), float(alloc.height))
-        origin = screen * 0.5
-        scale = self.dpi(widget)
-        # excute the program
-        self.run(cr, origin, scale, screen)
-
-    def makeRenderWidget(self):
-        da = Gtk.DrawingArea()
-        da.set_events(Gdk.EventMask.ALL_EVENTS_MASK)
-        da.connect('draw', self.draw)
-        da.add_tick_callback(self.update)
-        self.dc = DragController(da, self)
-        return da
-
     def reload(self, container):
-        path = self.path
         self.params = params.ParameterGroup()
-        self.prog = compile(open(path, "r").read(), path, "exec")
+        self.prog = compile(open(self.path, "r").read(), self.path, "exec")
+
         try:
             exec(self.prog, {
                 '__name__': 'init',
@@ -133,27 +97,7 @@ class Script(object):
             traceback.print_exc()
             self.load_error = e
 
-        self.params.makeWidgets(container)
-
-    def hover(self, cursor):
-        pass
-
-    def begin(self, cursor):
-        pass
-
-    def drag(self, cursor):
-        pass
-
-    def drop(self, cursor):
-        pass
-
-    def click(self, cursor):
-        cb = Gtk.Clipboard.get_default(Gdk.Display.get_default())
-        cb.set_text(
-            "Point(%g, %g)" % (cursor.pos.x, cursor.pos.y),
-            -1
-        )
-        print(cursor.pos)
+        return self.params
 
     def run(self, cr, origin, scale, window_size):
         window = Rect.from_top_left(Point(0, 0),
@@ -177,7 +121,6 @@ class Script(object):
                         'Point': helpers.Point,
                         'Rect': helpers.Rect,
                         'time': time.time(),
-                        'cursor': self.dc.cursor,
                         '__name__': 'render',
                         'params': self.params.getValues()
                     })
@@ -264,54 +207,107 @@ class GUI(object):
     if HAVE_WATCHDOG:
         fw = FileWatcher()
     reader = ReaderThread()
+        
+    def __init__(self, path):
+        self.transform = None
+        self.path = path
+        self.param_container = None
+        self.dc = None
+        self.params = None
 
-    @classmethod
+        self.script = Script(self.path, self.reader)
+        if HAVE_WATCHDOG:
+            self.fw.watchFile(path, on_change)
+
+        self.render = Gtk.Window()
+
+        # quick hack to reload file on any keypress
+        self.render.connect('key-press-event', self.reload)
+                
+        sw = Gtk.ScrolledWindow()
+        self.render.set_title("Render: " + sys.argv[1])
+        self.render.add(sw)
+        da = self.makeRenderWidget()
+        sw.add(da)
+        self.render.connect("destroy", Gtk.main_quit)
+
+        self.parameters = Gtk.Window()
+        self.parameters.set_title("Parameters: " + sys.argv[1])
+        self.parameters.connect("destroy", Gtk.main_quit)
+
+        self.reload()
+        self.render.show_all()
+        self.parameters.show_all()
+
+    def reload(self, *unused):
+        print("reloading: " + self.path)
+        self.script.reload(self.parameters)
+
+    def on_change(self):
+        GLib.idle_add(self.reload)
+
     def run(self):
         if HAVE_WATCHDOG:
             self.fw.start()
         self.reader.start()
         Gtk.main()
 
-    @classmethod
-    def runScript(self, path):
-        def reload():
-            print("reloading: " + path)
-            script.reload(parameters)
-            da.set_size_request(*script.params.resolution)
-            render.set_default_size(*script.params.resolution)
+    def update(self, widget, unused):
+        try:
+            widget.queue_draw()
+        finally:
+            return True
 
-        def on_change():
-            GLib.idle_add(reload)
+    def dpi(self, widget):
+        """Return the dpi of the current monitor as a Point."""
+        s = widget.get_screen()
+        m = s.get_monitor_at_window(widget.get_window())
+        geom = s.get_monitor_geometry(m)
+        mm = Point(s.get_monitor_width_mm(m),
+                   s.get_monitor_height_mm(m))
+        size = Point(float(geom.width), float(geom.height))
+        return size / mm
 
-        script = Script(path, self.reader)
-        if HAVE_WATCHDOG:
-            self.fw.watchFile(path, on_change)
+    def draw(self, widget, cr):
+        # get window / screen geometry
+        alloc = widget.get_allocation()
+        screen = Point(float(alloc.width), float(alloc.height))
+        origin = screen * 0.5
+        scale = self.dpi(widget)
+        # excute the program
+        self.script.run(cr, origin, scale, screen)
 
-        render = Gtk.Window()
+    def makeRenderWidget(self):
+        self.da = Gtk.DrawingArea()
+        self.da.set_events(Gdk.EventMask.ALL_EVENTS_MASK)
+        self.da.connect('draw', self.draw)
+        self.da.add_tick_callback(self.update)
+        self.dc = DragController(self.da, self)
+        return self.da
 
-        # quick hack to reload file on any keypress
-        render.connect('key-press-event', lambda *unused: reload())
-                
-        sw = Gtk.ScrolledWindow()
-        render.set_title("Render: " + sys.argv[1])
-        render.add(sw)
-        da = script.makeRenderWidget()
-        sw.add(da)
-        render.connect("destroy", Gtk.main_quit)
+    def hover(self, cursor):
+        pass
 
-        parameters = Gtk.Window()
-        parameters.set_title("Parameters: " + sys.argv[1])
-        parameters.connect("destroy", Gtk.main_quit)
+    def begin(self, cursor):
+        pass
 
-        reload()
-        render.show_all()
-        parameters.show_all()
+    def drag(self, cursor):
+        pass
 
+    def drop(self, cursor):
+        pass
+
+    def click(self, cursor):
+        cb = Gtk.Clipboard.get_default(Gdk.Display.get_default())
+        cb.set_text(
+            "Point(%g, %g)" % (cursor.pos.x, cursor.pos.y),
+            -1
+        )
+        print(cursor.pos)
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("A path to a valid python script is required.")
     else:
-        GUI.runScript(sys.argv[1])
-        GUI.run()
+        GUI(sys.argv[1]).run()
