@@ -56,7 +56,9 @@ class Window(object):
 
     """Wrapper around pywayland window which configures painting."""
 
-    def __init__(self, client):
+    def __init__(self, client, width, height):
+        self.width = width
+        self.height = height
         self.format = wayland_format_to_cairo_format(client.best_format())
 
         self.surface = client.compositor.create_surface()
@@ -68,7 +70,7 @@ class Window(object):
         self.frame_callback = self.surface.frame()
         self.frame_callback.dispatcher["done"] = self.redraw
 
-        self.shm_data, self.buffer = client.create_buffer()
+        self.shm_data, self.buffer = client.create_buffer(self.width, self.height)
         self.cairo_surface = self.create_cairo_surface()
         self.cr = cairo.Context(self.cairo_surface)
         self.surface.attach(self.buffer, 0, 0)
@@ -92,9 +94,9 @@ class Window(object):
         return cairo.ImageSurface.create_for_data(
             self.shm_data,
             self.format,
-            WIDTH,
-            HEIGHT,
-            stride_for_format(WIDTH, self.format))
+            self.width,
+            self.height,
+            stride_for_format(self.width, self.format))
     
     def redraw(self, callback, time, destroy_callback=True):
         if destroy_callback:
@@ -103,7 +105,7 @@ class Window(object):
         self.cr.save()
         self.paint(self.cr)
         self.cr.restore()
-        self.surface.damage(0, 0, WIDTH, HEIGHT)
+        self.surface.damage(0, 0, self.width, self.height)
     
         callback = self.surface.frame()
         callback.dispatcher["done"] = self.redraw
@@ -115,7 +117,7 @@ class Window(object):
         # TODO: create script object.
         cr.set_source_rgb(0, 0, 0)
         cr.paint()
-        cr.translate(WIDTH / 2, HEIGHT / 2)
+        cr.translate(self.width / 2, self.height / 2)
         cr.rotate(time.time())
         cr.rectangle(-75, -75, 150, 150)
         cr.set_source_rgb(1, 1, 1)
@@ -171,9 +173,9 @@ class WaylandClient(object):
 
         self.connected = True
 
-    def create_window(self):
+    def create_window(self, width, height):
         self.ensure_connected()
-        return Window(self)
+        return Window(self, width, height)
         
     def handler(self, registry, id_, interface, version):
         if interface == "wl_compositor":
@@ -194,9 +196,9 @@ class WaylandClient(object):
     def shm_format_handler(self, unused, format_):
         self.formats.add(WlShm.format(format_))
 
-    def create_buffer(self):
-        stride = stride_for_format(WIDTH, client.best_format())
-        size = stride * HEIGHT
+    def create_buffer(self, width, height):
+        stride = stride_for_format(width, client.best_format())
+        size = stride * height
 
         with AnonymousFile(size) as fd:
             shm_data = mmap.mmap(
@@ -207,8 +209,8 @@ class WaylandClient(object):
             pool = client.shm.create_pool(fd, size)
             buff = pool.create_buffer(
                 0,
-                WIDTH,
-                HEIGHT,
+                width,
+                height,
                 stride,
                 WlShm.format.argb8888.value)
             pool.destroy()
@@ -222,5 +224,5 @@ class WaylandClient(object):
 
 if __name__ == "__main__":
     client = WaylandClient()
-    w = client.create_window()
+    w = client.create_window(640, 480)
     client.run()
