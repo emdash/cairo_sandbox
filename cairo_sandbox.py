@@ -36,6 +36,7 @@ from gi.repository import Gdk
 from controller import DragController
 from helpers import Point, Rect, Save, Box
 import params.gtk as params
+from script import Script
 
 import cairo
 import helpers
@@ -43,7 +44,6 @@ import json
 import math
 import sys
 import threading
-import traceback
 from queue import Queue
 import time
 import os
@@ -57,110 +57,6 @@ except ImportError:
         "To enable auto-reload, please install `python3-watchdog`!",
         file=sys.stderr)
     HAVE_WATCHDOG=False
-
-
-class Script(object):
-
-    def __init__(self, path, reader):
-        self.transform = None
-        self.reader = reader
-        self.load_error = None
-        self.path = path
-        self.prog = None
-        self.dc = None
-        self.params = None
-
-    def reload(self, container):
-        self.params = params.ParameterGroup()
-        self.prog = compile(open(self.path, "r").read(), self.path, "exec")
-
-        try:
-            exec(self.prog, {
-                '__name__': 'init',
-                'cairo': cairo,
-                'params': self.params,
-                'Angle': params.AngleParameter,
-                'Choice': params.ChoiceParameter,
-                'Color': params.ColorParameter,
-                'Custom': params.CustomParameter,
-                'Font': params.FontParameter,
-                'Image': params.ImageParameter,
-                'Infinite': params.InfiniteParameter,
-                'Numeric': params.NumericParameter,
-                'Point': params.PointParameter,
-                'Script': params.ScriptParameter,
-                'Table': params.TableParameter,
-                'Text': params.TextParameter,
-                'Toggle': params.ToggleParameter,
-            })
-        except BaseException as e:
-            traceback.print_exc()
-            self.load_error = e
-
-        return self.params
-
-    def run(self, cr, origin, scale, window_size):
-        window = Rect.from_top_left(Point(0, 0),
-                                    window_size.x, window_size.y)
-        with Save(cr):
-            error = None
-
-            # Trap all errors for the script, so we can display them
-            # nicely.
-            try:
-                exec(
-                    self.prog,
-                    {
-                        'cr': cr,
-                        'cairo': cairo,
-                        'math': math,
-                        'stdin': self.reader.env,
-                        'window': window,
-                        'scale_mm': scale,
-                        'helpers': helpers.Helper(cr),
-                        'Point': helpers.Point,
-                        'Rect': helpers.Rect,
-                        'time': time.time(),
-                        '__name__': 'render',
-                        'params': self.params.getValues()
-                    })
-            except BaseException as e:
-                error = traceback.format_exc()
-
-            self.transform = cr.get_matrix()
-            self.inverse_transform = cr.get_matrix()
-            self.inverse_transform.invert()
-
-            # save the current point
-            x, y = cr.get_current_point()
-
-        with Save(cr):
-            # stroke any residual path for feedback
-            cr.set_operator(cairo.OPERATOR_DIFFERENCE)
-            cr.set_source_rgb(1.0, 1.0, 1.0)
-            cr.set_line_width(0.1)
-            cr.stroke()
-
-        with Save(cr):
-            cr.set_source_rgb(1.0, 1.0, 1.0)
-            cr.set_operator(cairo.OPERATOR_DIFFERENCE)
-            # draw the current point.
-            x, y = self.transform.transform_point(x, y)
-            cr.translate(x, y)
-            cr.move_to(-5, 0)
-            cr.line_to(5, 0)
-            cr.move_to(0, -5)
-            cr.line_to(0, 5)
-            cr.stroke()
-
-        if error is not None:
-            with Box(cr, window.inset(10), clip=False) as layout:
-                cr.set_source_rgba(1.0, 0.0, 0.0, 0.5)
-                cr.move_to(*layout.northwest())
-                for line in error.split('\n'):
-                    cr.show_text(line)
-                    cr.translate(0, 10)
-                    cr.move_to(*layout.northwest())
 
 
 class ReaderThread(threading.Thread):
@@ -202,34 +98,34 @@ class FileWatcher(object):
 
 class GUI(object):
 
-    """Singleton for the entire application."""
+    """Gtk user interface for writing cairo_sandbox scripts."""
 
     if HAVE_WATCHDOG:
         fw = FileWatcher()
     reader = ReaderThread()
         
     def __init__(self, path):
-        self.transform = None
         self.path = path
-        self.param_container = None
-        self.dc = None
-        self.params = None
+        self.param_group = None
 
         self.script = Script(self.path, self.reader)
         if HAVE_WATCHDOG:
-            self.fw.watchFile(path, on_change)
+            self.fw.watchFile(path, self.onFileChanged)
+
+        self.da = Gtk.DrawingArea()
+        self.da.set_events(Gdk.EventMask.ALL_EVENTS_MASK)
+        self.da.connect('draw', self.draw)
+        self.da.add_tick_callback(self.update)
+        self.dc = DragController(self.da, self)
+
+        sw = Gtk.ScrolledWindow()
+        sw.add(self.da)
 
         self.render = Gtk.Window()
-
-        # quick hack to reload file on any keypress
-        self.render.connect('key-press-event', self.reload)
-                
-        sw = Gtk.ScrolledWindow()
         self.render.set_title("Render: " + sys.argv[1])
-        self.render.add(sw)
-        da = self.makeRenderWidget()
-        sw.add(da)
+        self.render.connect('key-press-event', self.reload)
         self.render.connect("destroy", Gtk.main_quit)
+        self.render.add(sw)
 
         self.parameters = Gtk.Window()
         self.parameters.set_title("Parameters: " + sys.argv[1])
@@ -239,11 +135,13 @@ class GUI(object):
         self.render.show_all()
         self.parameters.show_all()
 
-    def reload(self, *unused):
+    def reload(self):
         print("reloading: " + self.path)
-        self.script.reload(self.parameters)
+        self.param_group = params.ParameterGroup()        
+        self.script.reload(self.param_group)
+        self.param_group.makeWidgets(self.parameters)
 
-    def on_change(self):
+    def onFileChanged(self):
         GLib.idle_add(self.reload)
 
     def run(self):
@@ -258,7 +156,7 @@ class GUI(object):
         finally:
             return True
 
-    def dpi(self, widget):
+    def getScale(self, widget):
         """Return the dpi of the current monitor as a Point."""
         s = widget.get_screen()
         m = s.get_monitor_at_window(widget.get_window())
@@ -271,19 +169,14 @@ class GUI(object):
     def draw(self, widget, cr):
         # get window / screen geometry
         alloc = widget.get_allocation()
-        screen = Point(float(alloc.width), float(alloc.height))
-        origin = screen * 0.5
-        scale = self.dpi(widget)
-        # excute the program
-        self.script.run(cr, origin, scale, screen)
+        scale = self.getScale(widget)
+        window = Rect.from_top_left(Point(0, 0),
+                                    alloc.x / scale.x, alloc.y / scale.y)
 
-    def makeRenderWidget(self):
-        self.da = Gtk.DrawingArea()
-        self.da.set_events(Gdk.EventMask.ALL_EVENTS_MASK)
-        self.da.connect('draw', self.draw)
-        self.da.add_tick_callback(self.update)
-        self.dc = DragController(self.da, self)
-        return self.da
+        cr.translate(alloc.width / 2, alloc.height / 2)
+        
+        # excute the program
+        self.script.run(cr, scale, window)
 
     def hover(self, cursor):
         pass
