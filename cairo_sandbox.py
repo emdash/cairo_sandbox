@@ -169,9 +169,9 @@ class GUI(object):
     def draw(self, widget, cr):
         alloc = widget.get_allocation()
         scale = self.getScale(widget)
-        window = Rect.from_top_left(Point(0, 0), alloc.x, alloc.y)
-        cr.translate(alloc.width / 2, alloc.height / 2)
+        window = Rect.from_top_left(Point(0, 0), alloc.width, alloc.height)
         self.script.run(cr, scale, window)
+        self.render.resize(*self.param_group.resolution)
 
     def hover(self, cursor):
         pass

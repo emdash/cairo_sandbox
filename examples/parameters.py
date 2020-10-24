@@ -32,6 +32,7 @@ if __name__ == "init":
 
     params.define("image",
                   Image(cairo.SolidPattern(0, 0, 0)))
+    params.setResolution(800, 600)
 else:
     cr.set_antialias(params["antialias"])
     cr.select_font_face(params["font"])
