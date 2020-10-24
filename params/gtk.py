@@ -16,7 +16,10 @@
 # License along with this program.  If not, see
 # <https://www.gnu.org/licenses/>.
 
+import cmath
 from collections import OrderedDict
+import math
+import time
 
 import cairo
 import gi
@@ -26,6 +29,8 @@ from gi.repository import GObject
 from gi.repository import Gtk
 from gi.repository import Gdk
 
+from controller import ValueController
+from helpers import Helper, Rect, Point
 
 class Parameter(object):
 
@@ -578,3 +583,39 @@ class ParameterGroup(object):
 
         """
         self.resolution = x, y
+
+    def getInitEnv(self):
+        return {
+            '__name__': 'init',
+            'cairo': cairo,
+            'params': self,
+            'Angle': AngleParameter,
+            'Choice': ChoiceParameter,
+            'Color': ColorParameter,
+            'Custom': CustomParameter,
+            'Font': FontParameter,
+            'Image': ImageParameter,
+            'Infinite': InfiniteParameter,
+            'Numeric': NumericParameter,
+            'Point': PointParameter,
+            'Script': ScriptParameter,
+            'Table': TableParameter,
+            'Text': TextParameter,
+            'Toggle': ToggleParameter,
+        }
+
+    def getRenderEnv(self, cr, scale, window, stdin):
+        return {
+            'cr': cr,
+            'cairo': cairo,
+            'math': math,
+            'stdin': stdin,
+            'window': window,
+            'scale_mm': scale,
+            'helpers': Helper(cr),
+            'Point': Point,
+            'Rect': Rect,
+            'time': time.time(),
+            '__name__': 'render',
+            'params': self.getValues()
+        }
