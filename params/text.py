@@ -107,15 +107,13 @@ class ColorParameter(Parameter):
 
     def parse(self, text):
         # TBD, other color formats
-        if not text.startswith("#"):
-            raise ValueError("Could not parse as color: " + text)
-        elif not len(text) == 17:
+        if not len(text) == 8:
             raise ValueError("Could not parse as color: " + text)
 
-        a = int(text[1:2], 16) / 0xFFFF
-        r = int(text[3:4], 16) / 0xFFFF
-        g = int(text[5:6], 16) / 0xFFFF
-        b = int(text[7:8], 16) / 0xFFFF
+        a = int(text[0:2], 16) / 0xFF
+        r = int(text[2:4], 16) / 0xFF
+        g = int(text[4:6], 16) / 0xFF
+        b = int(text[6:8], 16) / 0xFF
         return cairo.SolidPattern(r, g, b, a)
 
 
@@ -265,13 +263,13 @@ class ToggleParameter(Parameter):
         self.require(default, bool)
         self.default = default
 
-    def parse(text):
+    def parse(self, text):
         if text == "true":
             return True
         elif text == "false":
             return False
 
-        raise ValueError("Could not parse {} as boolan".format(text))
+        raise ValueError("Could not parse {} as bool".format(text))
 
 
 class ParameterGroup(object):
