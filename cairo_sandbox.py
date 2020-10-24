@@ -167,15 +167,10 @@ class GUI(object):
         return size / mm
 
     def draw(self, widget, cr):
-        # get window / screen geometry
         alloc = widget.get_allocation()
         scale = self.getScale(widget)
-        window = Rect.from_top_left(Point(0, 0),
-                                    alloc.x / scale.x, alloc.y / scale.y)
-
+        window = Rect.from_top_left(Point(0, 0), alloc.x, alloc.y)
         cr.translate(alloc.width / 2, alloc.height / 2)
-        
-        # excute the program
         self.script.run(cr, scale, window)
 
     def hover(self, cursor):
