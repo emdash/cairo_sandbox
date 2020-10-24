@@ -26,16 +26,23 @@
 # - do we need explicit double buffering, or does wayland do this?
 # - damage region optimizations.
 
+
 """Stand-alone runner for pywayland."""
 
 
 import math
 import mmap
+import json
 import os
+import threading
 import time
 import sys
 
 import cairo
+
+import script
+from helpers import Rect, Point
+import params.text as params
 
 
 from pywayland.client import Display
@@ -73,10 +80,11 @@ class Window(object):
 
     """Wrapper around pywayland window which configures painting."""
 
-    def __init__(self, client, width, height):
+    def __init__(self, client, width, height, on_paint=None):
         self.width = width
         self.height = height
         self.format = wayland_format_to_cairo_format(client.best_format())
+        self.on_paint = on_paint
 
         self.surface = client.compositor.create_surface()
         
@@ -119,9 +127,7 @@ class Window(object):
         if destroy_callback:
             callback._destroy()
     
-        self.cr.save()
         self.paint(self.cr)
-        self.cr.restore()
         self.surface.damage(0, 0, self.width, self.height)
     
         callback = self.surface.frame()
@@ -131,15 +137,13 @@ class Window(object):
         self.surface.commit()
     
     def paint(self, cr):
-        # TODO: create script object.
-        cr.set_source_rgb(0, 0, 0)
-        cr.paint()
-        cr.translate(self.width / 2, self.height / 2)
-        cr.rotate(time.time())
-        cr.rectangle(-75, -75, 150, 150)
-        cr.set_source_rgb(1, 1, 1)
-        cr.set_line_width(15.0)
-        cr.stroke()
+        try:
+            self.cr.save()
+            self.cr.set_source_rgb(1.0, 1.0, 1.0)
+            self.cr.paint()
+            self.on_paint(cr)
+        finally:
+            self.cr.restore()
 
 
 class WaylandClient(object):
@@ -190,9 +194,9 @@ class WaylandClient(object):
 
         self.connected = True
 
-    def create_window(self, width, height):
+    def create_window(self, width, height, on_paint):
         self.ensure_connected()
-        return Window(self, width, height)
+        return Window(self, width, height, on_paint)
         
     def handler(self, registry, id_, interface, version):
         if interface == "wl_compositor":
@@ -239,7 +243,36 @@ class WaylandClient(object):
                 return f
         raise ValueError("No supported formats!")
 
+
+
+
+class ReaderThread(threading.Thread):
+
+    env = {}
+    daemon = True
+
+    def run(self):
+        while True:
+            self.env = json.loads(sys.stdin.readline())
+
+
+def on_paint(cr):
+    # TBD: get actual scale from wayland
+    scale = Point(1, 1)
+    script.run(cr, scale, window)
+
+
 if __name__ == "__main__":
+
+    reader = ReaderThread()
+    script = script.Script(sys.argv[1], reader)
+    params = params.ParameterGroup()
+    script.reload(params)
+
+    width, height = params.resolution
+    window = Rect.from_top_left(Point(0, 0), width, height)
     client = WaylandClient()
-    w = client.create_window(640, 480)
+    w = client.create_window(width, height, on_paint)
+    
+    reader.start()
     client.run()
