@@ -22,7 +22,6 @@
 
 # TODOS:
 # - allow for keyboard interrupt to work, plus some way for graceful exit.
-# - allow for window to automatically match the output resolution
 # - do we need explicit double buffering, or does wayland do this?
 # - damage region optimizations.
 
@@ -46,7 +45,7 @@ import params.text as params
 
 
 from pywayland.client import Display
-from pywayland.protocol.wayland import WlCompositor, WlShell, WlShm
+from pywayland.protocol.wayland import WlCompositor, WlShell, WlShm, WlOutput
 from pywayland.utils import AnonymousFile
 
 
@@ -174,14 +173,14 @@ class WaylandClient(object):
 
     def connect(self):
         assert not self.connected
+        self.width_mm = None
+        self.height_mm = None
 
         self.display.connect()
         print("connected to display")
 
         registry = self.display.get_registry()
         registry.dispatcher["global"] = self.handler
-        # registry.dispatcher["global_remove"] = registry_global_remover
-
         self.display.dispatch(block=True)
         self.display.roundtrip()
 
@@ -191,6 +190,10 @@ class WaylandClient(object):
             raise RuntimeError("no shell found")
         elif self.shm is None:
             raise RuntimeError("no shm found")
+
+        while self.width_mm is None:
+            self.display.dispatch(block=True)
+            self.display.roundtrip()
 
         self.connected = True
 
@@ -206,6 +209,12 @@ class WaylandClient(object):
         elif interface == "wl_shm":
             self.shm = registry.bind(id_, WlShm, version)
             self.shm.dispatcher["format"] = self.shm_format_handler
+        elif interface == "wl_output":
+            self.output = registry.bind(id_, WlOutput, version)
+            self.output.dispatcher["geometry"] = self.geometry_handler
+            self.output.dispatcher["mode"] = self.mode_handler
+        else:
+            print("Unhandled proxy:", interface)
 
     def run(self):
         self.ensure_connected()
@@ -216,6 +225,18 @@ class WaylandClient(object):
 
     def shm_format_handler(self, unused, format_):
         self.formats.add(WlShm.format(format_))
+
+    def geometry_handler(self, unused, x, y, width, height, *wtf):
+        self.width_mm = width
+        self.height_mm = height
+        print(wtf)
+
+    def mode_handler(self, unused, flags, width, height, refresh):
+        self.mode_flags = flags
+        self.width_pixels = width
+        self.height_pixels = height
+        self.refresh_mhz = refresh
+        print("Output Mode: {}x{}@{}".format(width, height, refresh))
 
     def create_buffer(self, width, height):
         stride = stride_for_format(width, client.best_format())
@@ -244,8 +265,6 @@ class WaylandClient(object):
         raise ValueError("No supported formats!")
 
 
-
-
 class ReaderThread(threading.Thread):
 
     env = {}
@@ -257,8 +276,9 @@ class ReaderThread(threading.Thread):
 
 
 def on_paint(cr):
-    # TBD: get actual scale from wayland
-    scale = Point(1, 1)
+    scale = Point(
+        client.width_pixels / client.width_mm,
+        client.height_pixels / client.height_mm)
     script.run(cr, scale, window)
 
 
@@ -269,10 +289,20 @@ if __name__ == "__main__":
     params = params.ParameterGroup()
     script.reload(params)
 
+    # TBD: this only works for a static output, it will break if the
+    # output resoluation changes. That's okay for this use-case
+    # however.
     width, height = params.resolution
-    window = Rect.from_top_left(Point(0, 0), width, height)
     client = WaylandClient()
-    w = client.create_window(width, height, on_paint)
-    
+    window = Rect.from_top_left(
+        Point(0, 0),
+        client.width_pixels,
+        client.height_pixels
+    )
+    w = client.create_window(
+        client.width_pixels,
+        client.height_pixels,
+        on_paint
+    )
     reader.start()
     client.run()
