@@ -25,7 +25,6 @@ import time
 import os
 
 import cairo
-from controller import ValueController
 from helpers import Helper, Rect, Point
 
 
