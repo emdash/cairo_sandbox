@@ -108,3 +108,22 @@ Requires gobject introspection libraries for `Gtk`, `pycairo`. Automatic reloadi
 ## Debian
 
 TBD
+
+# Open Questions
+
+- How scripts should specify their "native" size and units?
+  - How should scripts behave when output is too small?
+  - How should scripts behave when output is far larger than expected?
+  - Should scripts work in physical units by default? or Should they be in device coordinates by default?
+- How to compose scripts together?
+- How to handle "backgrounds" in scripts?
+  - Should scripts have a "transparent" background by default?
+  - Should there be a "background directive" that the runner should respect?
+- Parameters vs stdin?
+  - should these be unified under a namespace?
+  - should parameters *always* be supplied by an external process?
+- Interactivity
+  - mouse
+  - keyboard
+  - text input
+  - how to handle state changes
