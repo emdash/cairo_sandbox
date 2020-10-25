@@ -274,11 +274,14 @@ class ReaderThread(threading.Thread):
         while True:
             self.env = json.loads(sys.stdin.readline())
 
-
 def on_paint(cr):
-    scale = Point(
-        client.width_pixels / client.width_mm,
-        client.height_pixels / client.height_mm)
+    if client.width_mm == 0 or client.height_mm == 0:
+        print("Wayland reports bogus monitor dimensions!")
+        scale = Point(1, 1)
+    else:
+        scale = Point(
+            client.width_pixels / client.width_mm,
+            client.height_pixels / client.height_mm)
     script.run(cr, scale, window)
 
 
