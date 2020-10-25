@@ -22,7 +22,6 @@
 
 # TODOS:
 # - allow for keyboard interrupt to work, plus some way for graceful exit.
-# - do we need explicit double buffering, or does wayland do this?
 # - damage region optimizations.
 
 
