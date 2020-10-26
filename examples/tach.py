@@ -1,22 +1,26 @@
 if __name__ == "init":
     import math
     params.define("from_stdin", Toggle(False))
-    params.define("arc_length", Angle(3 * math.pi / 2))
+    params.define("arc_length", Angle(4.897, ))
     params.define("min_rpm", Numeric(0, 20000, 1, 0))
     params.define("max_rpm", Numeric(0, 20000, 1, 6500))
     params.define("redline", Numeric(0, 20000, 1, 6000))
     params.define("ticks", Numeric(1, 5000, 1, 500))
-    params.define("hub_radius", Numeric(2, 100, 1, 11))
-    params.define("number_radius", Numeric(0, 1, 1/256.0, 0.65))
-    params.define("tick_radius", Numeric(0, 1, 1/256.0, 0.80))
-    params.define("needle_radius", Numeric(0, 1, 1/256.0, 0.85))
-    params.define("tick_length", Numeric(0, 1, 1/256.0, 0.125))
+    params.define("hub_radius", Numeric(2, 100, 1, 20))
+    params.define("number_radius", Numeric(0, 1, 1/256.0, 0.8))
+    params.define("tick_radius", Numeric(0, 1, 1/256.0, 0.475))
+    params.define("needle_radius", Numeric(0, 1, 1/256.0, 0.80))
+    params.define("tick_length", Numeric(0, 1, 1/256.0, 0.150))
     params.define("rpm", Numeric(0, 6500, 1, 1000))
-    params.define("show_outline", Toggle(True))
-    params.define("radial_numbers", Toggle(True))
-    params.define("background_color", Color(1, 1, 1))
-    params.define("dial_color", Color(0, 0, 0))
+    params.define("show_outline", Toggle(False))
+    params.define("radial_numbers", Toggle(False))
+    params.define("background_color", Color(0, 0, 0))
+    params.define("dial_color", Color(0xED/255, 0xD4/255, 0))
     params.define("needle_color", Color(1, 0, 0))
+    params.define("text_size", Numeric(0, 96, 1, 52))
+    params.define("label", Text("RPM x 100"))
+    params.define("label_offset", Infinite(-67))
+    params.setResolution(1280, 720)
 else:
     arc_length = params["arc_length"]
     arc_remainder = 2 * math.pi - arc_length
@@ -42,6 +46,7 @@ else:
 
         cr.set_line_width(5)
         cr.set_line_cap(cairo.LineCap.ROUND)
+        cr.set_font_size(params["text_size"])
         for tick in range(int(min_rpm), int(max_rpm), int(ticks)):
             with helpers.save():
                 angle = rpm_to_angle(tick)
@@ -54,10 +59,13 @@ else:
                 else:
                     cr.rotate(-angle)
                 cr.move_to(0, 0)
-                cr.set_font_size(24)
                 helpers.center_text(str("%d" % (tick / 100)))
 
         cr.stroke()
+
+        cr.set_font_size(36)
+        helpers.move_to(bounds.center + Point(0, params["label_offset"]))
+        helpers.center_text(params["label"])
 
         if params["show_outline"]:
             cr.translate(*bounds.center)
