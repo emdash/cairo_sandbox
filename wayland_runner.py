@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#! /usr/bin/python3
 # cairo-sandbox: Interactive sandbox for cairo graphics.
 #
 # Copyright (C) 2020  Brandon Lewis
@@ -231,11 +231,13 @@ class WaylandClient(object):
         print(wtf)
 
     def mode_handler(self, unused, flags, width, height, refresh):
-        self.mode_flags = flags
-        self.width_pixels = width
-        self.height_pixels = height
-        self.refresh_mhz = refresh
-        print("Output Mode: {}x{}@{}".format(width, height, refresh))
+	# XXX: magic number should be the "current flag", i.e. ignore other modes.
+        if flags & 0x01:
+            self.mode_flags = flags
+            self.width_pixels = width
+            self.height_pixels = height
+            self.refresh_mhz = refresh
+        print("Output Mode: {}x{}@{} ({})".format(width, height, refresh, flags))
 
     def create_buffer(self, width, height):
         stride = stride_for_format(width, client.best_format())

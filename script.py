@@ -51,6 +51,13 @@ class Script(object):
         with helpers.Save(cr):
             error = None
 
+            # scripts are dimensioned in mm.
+            cr.scale(scale.x, scale.y)
+            window = helpers.Rect.from_top_left(
+                helpers.Point(0, 0),
+                window.width / scale.x,
+                window.height / scale.y)
+
             # Trap all errors for the script, so we can display them
             # nicely.
             try:
