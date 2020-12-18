@@ -3,7 +3,8 @@ if __name__ == "init":
     params.define("n_waves", Numeric(2, 100, 1, 12))
     params.define("speed", Numeric(0, 2, 0.125, 0.3))
     params.define("color", Color(1, 0, 0, 0.75))
-    params.setResolution(320, 240)
+    params.define("radius", Infinite(5.0))
+    params.setResolution(640, 480)
 else:
     import time
     
@@ -18,7 +19,7 @@ else:
             for i in range(stars):
                 with helpers.save():
                     cr.rotate(i * angle + phase)
-                    cr.arc(phase * radius, 0, 10, 0, 2 * math.pi)
+                    cr.arc(phase * radius, 0, params["radius"], 0, 2 * math.pi)
                     cr.fill()
 
         

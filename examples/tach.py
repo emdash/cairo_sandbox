@@ -9,7 +9,7 @@ if __name__ == "init":
     params.define("hub_radius", Numeric(2, 100, 1, 20))
     params.define("number_radius", Numeric(0, 1, 1/256.0, 0.8))
     params.define("tick_radius", Numeric(0, 1, 1/256.0, 0.475))
-    params.define("needle_radius", Numeric(0, 1, 1/256.0, 0.80))
+    params.define("needle_radius", Numeric(0, 1, 1/256.0, 0.6))
     params.define("tick_length", Numeric(0, 1, 1/256.0, 0.150))
     params.define("rpm", Numeric(0, 6500, 1, 1000))
     params.define("show_outline", Toggle(False))
@@ -17,10 +17,10 @@ if __name__ == "init":
     params.define("background_color", Color(0, 0, 0))
     params.define("dial_color", Color(0xED/255, 0xD4/255, 0))
     params.define("needle_color", Color(1, 0, 0))
-    params.define("text_size", Numeric(0, 96, 1, 52))
+    params.define("text_size", Numeric(0, 52, 1, 11))
     params.define("label", Text("RPM x 100"))
-    params.define("label_offset", Infinite(-67))
-    params.setResolution(1280, 720)
+    params.define("label_offset", Infinite(-20))
+    params.setResolution(1600, 900)
 else:
     arc_length = params["arc_length"]
     arc_remainder = 2 * math.pi - arc_length
@@ -44,7 +44,7 @@ else:
         radius = min(bounds.width, bounds.height) * 0.5
         hub_radius = max(5, radius / params["hub_radius"])
 
-        cr.set_line_width(5)
+        cr.set_line_width(4.0)
         cr.set_line_cap(cairo.LineCap.ROUND)
         cr.set_font_size(params["text_size"])
         for tick in range(int(min_rpm), int(max_rpm), int(ticks)):
@@ -63,7 +63,7 @@ else:
 
         cr.stroke()
 
-        cr.set_font_size(36)
+        cr.set_font_size(5)
         helpers.move_to(bounds.center + Point(0, params["label_offset"]))
         helpers.center_text(params["label"])
 
