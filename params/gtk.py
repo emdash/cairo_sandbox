@@ -24,10 +24,12 @@ import time
 import cairo
 import gi
 gi.require_version("Gtk", "3.0")
+gi.require_version("Pango", "1.0")
 gi.require_foreign("cairo")
 from gi.repository import GObject
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import Pango
 
 from controller import ValueController
 from helpers import Helper, Rect, Point
@@ -240,16 +242,10 @@ class FontParameter(Parameter):
 
     """An easy way to chose a specific font."""
 
-    # TBD: When we support Pango for text, revisit this control.
-
-    def __init__(self, default="monospace", use_pango=False):
+    def __init__(self, default="monospace"):
         self.require(default, (str, type(None)))
-        self.require(use_pango, bool)
-        if (use_pango):
-            raise NotImplementedError()
-        self.use_pango = use_pango
         self.default = default
-        self.value = default
+        self.value = Pango.FontDescription(default)
         self.widget = None
 
     def makeWidget(self):
@@ -264,7 +260,8 @@ class FontParameter(Parameter):
         return self.widget
 
     def update(self, *unused):
-        self.value = self.widget.get_font().split()[0]
+        self.value = self.widget.get_font_desc()
+        print(self.value)
 
     def getValue(self):
         return self.value

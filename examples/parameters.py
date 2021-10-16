@@ -19,23 +19,21 @@ if __name__ == "init":
     # More complex case, a mapping of keys to values"
     params.define(
         "antialias",
-        Choice(
-            {"Default": cairo.Antialias.DEFAULT,
-             "None": cairo.Antialias.NONE,
-             "Gray": cairo.Antialias.GRAY,
-             "Subpixel": cairo.Antialias.SUBPIXEL,
-             "Fast": cairo.Antialias.FAST,
-             "Good": cairo.Antialias.GOOD,
-             "Best": cairo.Antialias.BEST
-            },
-            "Default"))
+        Choice({
+            "Default": cairo.Antialias.DEFAULT,
+            "None": cairo.Antialias.NONE,
+            "Gray": cairo.Antialias.GRAY,
+            "Subpixel": cairo.Antialias.SUBPIXEL,
+            "Fast": cairo.Antialias.FAST,
+            "Good": cairo.Antialias.GOOD,
+            "Best": cairo.Antialias.BEST
+        }, "Default"))
 
     params.define("image",
                   Image(cairo.SolidPattern(0, 0, 0)))
     params.setResolution(800, 600)
 else:
     cr.set_antialias(params["antialias"])
-    cr.select_font_face(params["font"])
     cr.set_font_size(24)
     (x,y) = window.center
 
@@ -81,7 +79,7 @@ else:
             cr.translate(x, y)
             cr.rotate(params["angle"])
             cr.move_to(0, 0)
-            helpers.center_text(params["text"])
+            helpers.center_text(params["text"], params["font"])
 
         cr.move_to(window.center.x, 100)
-        helpers.center_text(params["multiline"])
+        helpers.center_text(params["multiline"], params["font"])

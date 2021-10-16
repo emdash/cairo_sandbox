@@ -18,6 +18,12 @@
 
 
 import cairo
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_version("Pango", "1.0")
+gi.require_foreign("cairo")
+from gi.repository import Pango
+from gi.repository import PangoCairo
 import cmath
 import math
 import traceback
@@ -29,6 +35,7 @@ class Helper(object):
 
     def __init__(self, cr):
         self.cr = cr
+        self.pr = PangoCairo.create_context(cr)
 
     def circle(self, center, radius):
         self.cr.arc(center.x, center.y, radius, 0, 2 * math.pi)
@@ -39,13 +46,19 @@ class Helper(object):
             self.cr.scale(1.0, height / width)
             self.circle(Point(0, 0), width)
 
-    def center_text(self, text):
+    def show_text(self, text, font):
+        layout = PangoCairo.create_layout(self.cr)
+        layout.set_font_description(font)
+        layout.set_text(text, -1)
+        PangoCairo.show_layout(self.cr, layout)
+
+    def center_text(self, text, font):
         _, _, tw, th, _, _ = self.cr.text_extents(text)
         x, y = self.cr.get_current_point()
         with self.save():
             self.cr.translate(x - tw * 0.5, y + th * 0.5)
             self.cr.move_to(0, 0)
-            self.cr.show_text(text)
+            self.show_text(text, font)
 
     def center_rect(self, center, w, h):
         self.cr.rectangle(center.x - 0.5 * w, center.y - 0.5 * h, w, h)
@@ -230,3 +243,4 @@ class Box(object):
 
     def __exit__(self, unused1, unused2, unused3):
         self.cr.restore()
+ 

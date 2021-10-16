@@ -28,10 +28,15 @@ from __future__ import print_function
 
 import gi
 gi.require_version("Gtk", "3.0")
+gi.require_version("Pango", "1.0")
 gi.require_foreign("cairo")
 from gi.repository import GLib
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import Pango
+
+gi.require_version("PangoCairo", "1.0");
+from gi.repository import PangoCairo
 
 from controller import DragController
 from helpers import Point, Rect, Save, Box
@@ -135,7 +140,7 @@ class GUI(object):
         self.render.show_all()
         self.parameters.show_all()
 
-    def reload(self):
+    def reload(self, *unused):
         print("reloading: " + self.path)
         self.param_group = params.ParameterGroup()        
         self.script.reload(self.param_group)
