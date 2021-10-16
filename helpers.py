@@ -70,7 +70,7 @@ class Helper(object):
 
     def polygon(self, *points, close=True):
         self.move_to(points[0])
-        for point in points:
+        for point in points[1:]:
             self.line_to(point)
         if close:
             self.cr.close()
