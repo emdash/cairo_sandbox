@@ -31,7 +31,31 @@ import traceback
 
 class Helper(object):
 
-    """Provide useful methods not available in the standard cairo API."""
+    """Wraps a cairo context in a higher-level API.
+
+    New Primitives:
+    - circle
+    - elipse
+    - round rect
+    - center rect
+    - center round rect
+    - center text
+    - polygon
+    - vertical and horizontal lines
+
+    Transform Context Managers (so you cannot forget `restore()`):
+    - save
+    - box
+
+    Wrapper methods which Point and / or Rect objects instead of x/y pairs:
+    - moveto
+    - lineto
+    - curveto
+
+    Debugging features:
+    - debug_stroke() - stroke a hairline path using CAIRO_INVERSE
+    - debug_fill()   - fill the path using CAIRO_INVERSE
+    """
 
     def __init__(self, cr):
         self.cr = cr
@@ -78,8 +102,19 @@ class Helper(object):
     def line_to(self, point):
         self.cr.line_to(*point)
 
+    def arc(self, center, rad, start, end):
+        self.cr.arc(center.x, center.y, rad, start, end)
+
     def curve_to(self, a, b, c):
         self.cr.curve_to(a.x, a.y, b.x, b.y, c.x, c.y)
+
+    def hline(self, pos, rect):
+        self.cr.move_to(rect.east().x, pos)
+        self.cr.line_to(rect.west().x, pos)
+
+    def vline(self, pos, rect):
+        self.cr.move_to(pos, rect.north().y)
+        self.cr.line_to(pos, rect.south().y)
 
     def polygon(self, *points, close=True):
         self.move_to(points[0])
@@ -96,6 +131,22 @@ class Helper(object):
 
     def box(self, rect, clip=True):
         return Box(self.cr, rect, clip)
+
+    def _set_source_debug(self):
+        self.cr.set_source_rgb(1.0, 1.0, 1.0)
+        self.cr.set_operator(cairo.OPERATOR_DIFFERENCE)
+
+    def debug_stroke(self):
+        with self.save():
+            self._set_source_debug()
+            self.cr.identity_matrix()
+            self.cr.set_line_width(1.0)
+            self.cr.stroke()
+
+    def debug_fill(self):
+        with self.save():
+            self._set_source_debug()
+            self.cr.fill()
 
 
 class Point(object):
