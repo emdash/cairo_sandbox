@@ -602,7 +602,12 @@ class ParameterGroup(object):
         }
 
     def getRenderEnv(self, cr, scale, window, stdin):
-        return {
+        """Get the global environment for script rendering.
+
+        This will include all defined parameters plus some useful globals.
+        """
+
+        globals_ = {
             'cr': cr,
             'cairo': cairo,
             'math': math,
@@ -613,6 +618,10 @@ class ParameterGroup(object):
             'Point': Point,
             'Rect': Rect,
             'time': time.time(),
+            'params': self.getValues(),
             '__name__': 'render',
-            'params': self.getValues()
         }
+
+        globals_.update(self.getValues())
+
+        return globals_
