@@ -108,7 +108,7 @@ class GUI(object):
     if HAVE_WATCHDOG:
         fw = FileWatcher()
     reader = ReaderThread()
-        
+
     def __init__(self, path):
         self.path = path
         self.param_group = None
@@ -142,7 +142,7 @@ class GUI(object):
 
     def reload(self, *unused):
         print("reloading: " + self.path)
-        self.param_group = params.ParameterGroup()        
+        self.param_group = params.ParameterGroup()
         self.script.reload(self.param_group)
         self.param_group.makeWidgets(self.parameters)
 
