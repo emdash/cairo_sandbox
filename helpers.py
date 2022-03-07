@@ -59,7 +59,6 @@ class Helper(object):
 
     def __init__(self, cr):
         self.cr = cr
-        self.pr = PangoCairo.create_context(cr)
 
     def circle(self, center, radius):
         self.cr.arc(center.x, center.y, radius, 0, 2 * math.pi)
@@ -70,17 +69,23 @@ class Helper(object):
             self.cr.scale(1.0, height / width)
             self.circle(Point(0, 0), width)
 
-    def show_text(self, text, font):
+    def get_layout(self, text, font):
         layout = PangoCairo.create_layout(self.cr)
         layout.set_font_description(font)
         layout.set_text(text, -1)
-        PangoCairo.show_layout(self.cr, layout)
+        return layout
+
+    def show_text(self, text, font):
+        PangoCairo.show_layout(self.cr, self.get_layout(text,font))
 
     def center_text(self, text, font):
-        _, _, tw, th, _, _ = self.cr.text_extents(text)
+        layout = self.get_layout(text, font)
+        rect = layout.get_pixel_extents()[0]
+        tw = rect.width
+        th = rect.height
         x, y = self.cr.get_current_point()
         with self.save():
-            self.cr.translate(x - tw * 0.5, y + th * 0.5)
+            self.cr.translate(x - tw * 0.5 - rect.x, y - th * 0.5 - rect.y)
             self.cr.move_to(0, 0)
             self.show_text(text, font)
 
