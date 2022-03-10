@@ -289,7 +289,7 @@ def on_paint(cr):
 if __name__ == "__main__":
 
     reader = ReaderThread()
-    script = script.Script(sys.argv[1], reader)
+    script = script.Script(sys.argv[1], reader, render_tb=False)
     params = params.ParameterGroup()
     script.reload(params)
 

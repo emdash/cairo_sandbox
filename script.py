@@ -21,13 +21,14 @@ import traceback
 
 import cairo
 import helpers
+import sys
 
 
 class Script(object):
 
     """Loads and runs the script given at `path`."""
 
-    def __init__(self, path, reader):
+    def __init__(self, path, reader, render_tb=True, halt_on_exc=False):
         self.transform = None
         self.reader = reader
         self.load_error = None
@@ -35,17 +36,21 @@ class Script(object):
         self.prog = None
         self.dc = None
         self.params = None
-        self.params
+        self.render_tb = render_tb
+        self.halt_on_exc = halt_on_exc
 
     def reload(self, param_group):
         self.params = param_group
         self.prog = compile(open(self.path, "r").read(), self.path, "exec")
 
-        try:
+        if self.halt_on_exc:
             exec(self.prog, param_group.getInitEnv())
-        except BaseException as e:
-            traceback.print_exc()
-            self.load_error = e
+        else:
+            try:
+                exec(self.prog, param_group.getInitEnv())
+            except BaseException as e:
+                traceback.print_exc()
+                self.load_error = e
 
     def run(self, cr, scale, window):
         with helpers.Save(cr):
@@ -60,11 +65,15 @@ class Script(object):
 
             # Trap all errors for the script, so we can display them
             # nicely.
-            try:
+            if not self.halt_on_exc:
+                try:
+                    exec(self.prog,
+                        self.params.getRenderEnv(cr, scale, window, self.reader.env))
+                except BaseException as e:
+                    error = traceback.format_exc()
+            else:
                 exec(self.prog,
                      self.params.getRenderEnv(cr, scale, window, self.reader.env))
-            except BaseException as e:
-                error = traceback.format_exc()
 
             self.transform = cr.get_matrix()
             self.inverse_transform = cr.get_matrix()
@@ -92,7 +101,7 @@ class Script(object):
             cr.line_to(0, 5)
             cr.stroke()
 
-        if error is not None:
+        if error is not None and self.render_tb:
             with helpers.Box(cr, window.inset(10), clip=False) as layout:
                 cr.set_source_rgba(1.0, 0.0, 0.0, 0.5)
                 cr.move_to(*layout.northwest())
@@ -100,3 +109,5 @@ class Script(object):
                     cr.show_text(line)
                     cr.translate(0, 10)
                     cr.move_to(*layout.northwest())
+        elif error is not None:
+            print(error, file=sys.stderr)
