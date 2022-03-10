@@ -1,6 +1,5 @@
 if __name__ == "init":
     import math
-    params.define("from_stdin", Toggle(False))
     params.define("arc_length", Angle(4.897, ))
     params.define("min_rpm", Numeric(0, 20000, 1, 0))
     params.define("max_rpm", Numeric(0, 20000, 1, 6500))
@@ -76,10 +75,7 @@ else:
         cr.set_source(params["needle_color"])
 
         with helpers.save():
-            if params["from_stdin"]:
-                cr.rotate(rpm_to_angle(stdin["rpm"]))
-            else:
-                cr.rotate(rpm_to_angle(params["rpm"]))
+            cr.rotate(rpm_to_angle(params["rpm"]))
             cr.move_to(radius * params["needle_radius"], 0)
             cr.line_to(0, hub_radius)
             cr.line_to(0, -hub_radius)
@@ -88,4 +84,3 @@ else:
 
         helpers.circle(Point(0, 0), hub_radius)
         cr.fill()
-        
