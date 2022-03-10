@@ -622,4 +622,4 @@ class ParameterGroup(object):
             'params': values,
         }
         ret.update(values)
-        return globals_
+        return ret
