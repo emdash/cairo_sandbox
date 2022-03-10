@@ -295,9 +295,11 @@ class ParameterGroup(object):
             for name, param in self.params.items()
         }
 
-    def getParamValue(self, name, param):
+    def getParamValue(self, name, param, env):
         if name in os.environ:
             return param.parse(os.environ[name])
+        elif name in env:
+            return param.parse(env[name])
         else:
             return param.default
 
@@ -333,12 +335,12 @@ class ParameterGroup(object):
             'Toggle': ToggleParameter,
         }
 
-    def getRenderEnv(self, cr, scale, window, stdin):
-        return {
+    def getRenderEnv(self, cr, scale, window, env):
+        values = self.getValues()
+        ret = {
             'cr': cr,
             'cairo': cairo,
             'math': math,
-            'stdin': stdin,
             'window': window,
             'scale_mm': scale,
             'helpers': Helper(cr),
@@ -346,5 +348,7 @@ class ParameterGroup(object):
             'Rect': Rect,
             'time': time.time(),
             '__name__': 'render',
-            'params': self.getValues()
+            'params': values
         }
+        ret.update(values)
+        return ret

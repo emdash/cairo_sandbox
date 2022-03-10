@@ -338,7 +338,7 @@ class InfiniteParameter(Parameter):
         self.saved_value = self.value
 
     def getValue(self):
-        return self.value
+        return float(self.label.get_text())
 
     def updateValue(self, cursor):
         value = self.saved_value - self.rate * cursor.rel.y
@@ -601,27 +601,25 @@ class ParameterGroup(object):
             'Toggle': ToggleParameter,
         }
 
-    def getRenderEnv(self, cr, scale, window, stdin):
+    def getRenderEnv(self, cr, scale, window, env):
         """Get the global environment for script rendering.
 
         This will include all defined parameters plus some useful globals.
         """
-
-        globals_ = {
+        values = self.getValues()
+        values.update(env)
+        ret = {
             'cr': cr,
             'cairo': cairo,
             'math': math,
-            'stdin': stdin,
             'window': window,
             'scale_mm': scale,
             'helpers': Helper(cr),
             'Point': Point,
             'Rect': Rect,
             'time': time.time(),
-            'params': self.getValues(),
             '__name__': 'render',
+            'params': values,
         }
-
-        globals_.update(self.getValues())
-
+        ret.update(values)
         return globals_
