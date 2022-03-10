@@ -289,7 +289,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args(sys.argv[1:])
     reader = DummyReader()
-    script = Script(args.script, reader)
+    script = Script(args.script, reader, render_tb=False, halt_on_exc=True)
     script.reload(params.ParameterGroup())
     wrapper = SurfaceWrapper.from_args(args)
 
