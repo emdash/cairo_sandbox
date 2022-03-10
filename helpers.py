@@ -77,19 +77,36 @@ class Helper(object):
         layout.set_text(text, -1)
         return layout
 
-    def show_text(self, text, font):
-        PangoCairo.show_layout(self.cr, self.get_layout(text,font))
-
-    def center_text(self, text, font):
-        layout = self.get_layout(text, font)
+    def get_layout_rect(self, layout, centered=True):
         rect = layout.get_pixel_extents()[0]
-        tw = rect.width
-        th = rect.height
-        x, y = self.cr.get_current_point()
+        return Rect(
+            Point(rect.x, rect.y),
+            rect.width,
+            rect.height
+        )
+
+    def show_layout(self, layout, centered=True):
+        """Render the given layout at the current point.
+
+        If centered is True, then the text is centered on said point.
+        Otherwise, the current point is the top-left anchor of the text.
+        """
         with self.save():
-            self.cr.translate(x - tw * 0.5 - rect.x, y - th * 0.5 - rect.y)
-            self.cr.move_to(0, 0)
-            self.show_text(text, font)
+            if centered:
+                rect = layout.get_pixel_extents()[0]
+                tw = rect.width
+                th = rect.height
+                x, y = self.cr.get_current_point()
+                self.cr.translate(x - tw * 0.5 - rect.x, y - th * 0.5 - rect.y)
+                self.cr.move_to(0, 0)
+        PangoCairo.show_layout(self.cr, layout)
+
+    def show_text(self, text, font, centered=True):
+        self.show_layout(self.get_layout(text,font), centered)
+
+    # this is now deprecated
+    def center_text(self, text, font):
+        self.show_text(text, font, centered=True)
 
     def center_rect(self, center, w, h):
         self.cr.rectangle(center.x - 0.5 * w, center.y - 0.5 * h, w, h)
@@ -146,6 +163,7 @@ class Helper(object):
     def debug_stroke(self):
         with self.save():
             self._set_source_debug()
+            # these two things give us a hairline.
             self.cr.identity_matrix()
             self.cr.set_line_width(1.0)
             self.cr.stroke()
