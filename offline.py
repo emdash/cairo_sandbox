@@ -123,7 +123,6 @@ class SurfaceWrapper:
             self.cr.save()
             self.cr.set_source_rgba(0, 0, 0, 0)
             self.cr.paint()
-            # TBD: actually use the dpi value for scale.
             script.run(self.cr, self.scale, self.window)
         finally:
             self.cr.restore()
@@ -181,11 +180,11 @@ class SurfaceWrapper:
 
 class PngSurfaceWrapper(SurfaceWrapper):
     def __init__(self, args):
-        width, height = (pt_to_pixel(i, args.dpi) for i in args.size)
+        width, height = args.size
 
-        self.surface = cairo.ImageSurface(cairo.Format.ARGB32, width, height)
-        self.window = Rect(Point(0, 0), width, height)
-        self.scale = Point(1, 1)
+        self.surface = cairo.ImageSurface(cairo.Format.ARGB32, int(width), int(height))
+        self.window = Rect.from_top_left(Point(0, 0), width, height)
+        self.scale = Point(args.dpi / 25.4, args.dpi / 25.4)
         self.cr = cairo.Context(self.surface)
 
         if args.output is None:
