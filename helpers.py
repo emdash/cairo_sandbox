@@ -61,10 +61,12 @@ class Helper(object):
         self.cr = cr
 
     def circle(self, center, radius):
+        self.cr.new_sub_path()
         self.cr.arc(center.x, center.y, radius, 0, 2 * math.pi)
 
     def elipse(self, center, width, height):
         with self.save():
+            self.cr.new_sub_path()
             self.cr.translate(center.x, center.y)
             self.cr.scale(1.0, height / width)
             self.circle(Point(0, 0), width)
