@@ -291,10 +291,12 @@ class Box(object):
         self.width = bounds.width
         self.height = bounds.height
         self.clip = clip
+        self.path = None
 
     def __enter__(self):
         self.cr.save()
         if self.clip:
+            self.path = self.cr.copy_path()
             self.cr.rectangle(self.x, self.y, self.width, self.height)
             self.cr.clip()
         self.cr.translate(*self.center)
@@ -302,4 +304,5 @@ class Box(object):
 
     def __exit__(self, unused1, unused2, unused3):
         self.cr.restore()
- 
+        if self.clip:
+            self.cr.append_path(self.path)
