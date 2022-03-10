@@ -288,10 +288,10 @@ class ParameterGroup(object):
             raise ValueError("Parameter %s already defined" % name)
         self.params[name] = param
 
-    def getValues(self):
+    def getValues(self, env):
         """Get the current value for each parameter, as dict."""
         return {
-            name: self.getParamValue(name, param)
+            name: self.getParamValue(name, param, env)
             for name, param in self.params.items()
         }
 
@@ -336,7 +336,7 @@ class ParameterGroup(object):
         }
 
     def getRenderEnv(self, cr, scale, window, env):
-        values = self.getValues()
+        values = self.getValues(env)
         ret = {
             'cr': cr,
             'cairo': cairo,
