@@ -28,7 +28,7 @@ else:
                 cr.arc_negative(0, 0, radius, math.pi, 2 * math.pi)
 
     def hourglass(box, fill):
-        with helpers.box(box, False) as box:
+        with helpers.box(box, clip=False) as box:
             p = cairo.LinearGradient(*box.west(), *box.east())
             p.add_color_stop_rgb(1, 1.0, 1.0, 1.0)
             p.add_color_stop_rgb(0, 0.5, 0.5, 1.0)
@@ -69,5 +69,5 @@ else:
                 elipse(waist_rect.south(), waist_rect.width / 2, tilt * 20)
                 cr.stroke()
 
-    hourglass(window.inset(20), True)
-    hourglass(window.inset(20), False)
+    hourglass(window.inset(20), fill=True)
+    hourglass(window.inset(20), fill=False)
