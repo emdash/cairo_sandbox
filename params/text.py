@@ -18,13 +18,16 @@
 
 """Text-based parameter implementations."""
 
+import gi
+from gi.repository import Pango
+import cairo
+
 import cmath
 from collections import OrderedDict
 import math
 import time
 import os
 
-import cairo
 from helpers import Helper, Rect, Point
 
 
@@ -58,7 +61,7 @@ class AngleParameter(Parameter):
 
     def __init__(self, default, format="%.2f"):
         self.require(default, (float, int, None))
-        self.default = default
+        self.default = self.parse(default)
 
     def parse(self, text):
         return float(text)
@@ -118,7 +121,6 @@ class ColorParameter(Parameter):
 
 class CustomParameter(Parameter):
     """A parameter that YOU have implemented."""
-
     pass
 
 
@@ -126,19 +128,12 @@ class FontParameter(Parameter):
 
     """An easy way to chose a specific font."""
 
-    # TBD: When we support Pango for text, revisit this control.
-
-    def __init__(self, default="monospace", use_pango=False):
-        self.require(default, (str, type(None)))
-        self.require(use_pango, bool)
-        if (use_pango):
-            raise NotImplementedError()
-        self.use_pango = use_pango
-        self.default = default
+    def __init__(self, default="monospace"):
+        self.require(default, (str, type(str)))
+        self.default = self.parse(default)
 
     def parse(self, text):
-        ## TBD, check font exits
-        return text
+        return Pango.FontDescription(text)
 
 
 class ImageParameter(Parameter):
@@ -151,7 +146,7 @@ class ImageParameter(Parameter):
     def __init__(self, default=None):
         # Default can be a fallback pattern, or a path to an image.
         self.require(default, (str, cairo.Pattern, type(None)))
-        self.default = default
+        self.default = self.parse(default)
 
     def parse(self, text):
         return cairo.SurfacePattern(cairo.ImageSurface.create_from_png(text))
@@ -163,10 +158,11 @@ class InfiniteParameter(Parameter):
 
     def __init__(self, default, rate=0.125, format="%.2f"):
         self.require(default, (float, int, None))
-        self.default = default
+        self.type = type(default)
+        self.default = self.parse(default)
 
     def parse(self, text):
-        return type(self.default)(text)
+        return self.type(text)
 
 
 class NumericParameter(Parameter):
@@ -181,10 +177,11 @@ class NumericParameter(Parameter):
         self.lower = lower
         self.upper = upper
         self.step = step
-        self.default = default
+        self.type = type(default)
+        self.default = self.parse(default)
 
     def parse(self, text):
-        value = type(self.default)(text)
+        value = self.type(text)
         if self.lower <= value <= self.upper:
             return value
         else:
@@ -199,7 +196,10 @@ class PointParameter(Parameter):
 
     def __init__(self, default=None):
         self.require(default, (Point, None))
-        self.default = default
+        self.default = self.parse(default)
+
+    def parse(self, text):
+        raise NotImplementedError
 
 
 class ScriptParameter(Parameter):
