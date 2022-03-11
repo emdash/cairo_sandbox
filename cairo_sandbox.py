@@ -131,6 +131,7 @@ class GUI(object):
         self.render.connect('key-press-event', self.reload)
         self.render.connect("destroy", Gtk.main_quit)
         self.render.add(sw)
+        self.render.resize(640, 480)
 
         self.parameters = Gtk.Window()
         self.parameters.set_title("Parameters: " + sys.argv[1])
@@ -176,7 +177,6 @@ class GUI(object):
         scale = self.getScale(widget)
         window = Rect.from_top_left(Point(0, 0), alloc.width, alloc.height)
         self.script.run(cr, scale, window)
-        self.render.resize(*self.param_group.resolution)
 
     def hover(self, cursor):
         pass

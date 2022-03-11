@@ -1,29 +1,25 @@
 if __name__ == "init":
     params.define("n_stars", Numeric(4, 100, 1, 11))
     params.define("n_waves", Numeric(2, 100, 1, 12))
-    params.define("speed", Numeric(0, 2, 0.125, 0.3))
+    params.define("speed", Numeric(1/128, 2, 0.125, 0.3))
     params.define("color", Color(1, 0, 0, 0.75))
     params.define("radius", Infinite(5.0))
-    params.setResolution(640, 480)
 else:
     import time
-    
-    radius = min(window.width, window.height)
-    stars = int(params["n_stars"])
+
+    stars = int(n_stars)
     angle = 2 * math.pi / stars
-    speed = 1 / params["speed"]
-    phase_separation = speed / params["n_waves"]
-    
+    speed = 1 / speed
+    phase_separation = speed / n_waves
+
     def starburst(phase):
         with helpers.box(window) as layout:
             for i in range(stars):
                 with helpers.save():
                     cr.rotate(i * angle + phase)
-                    cr.arc(phase * radius, 0, params["radius"], 0, 2 * math.pi)
+                    helpers.circle(Point(phase * window.radius(), 0), radius)
                     cr.fill()
 
-        
-    cr.set_source(params["color"])
-    for i in range(int(params["n_waves"])):
+    cr.set_source(color)
+    for i in range(int(n_waves)):
         starburst((time.time() + i * phase_separation) % speed)
-    
