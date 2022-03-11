@@ -178,6 +178,8 @@ class SurfaceWrapper:
         raise NotImplemented
 
 
+# Of all the output formats, this is the odd one out, because you don't create
+# PngSurface directly.
 class PngSurfaceWrapper(SurfaceWrapper):
     def __init__(self, args):
         width, height = args.size
@@ -187,18 +189,13 @@ class PngSurfaceWrapper(SurfaceWrapper):
         self.scale = Point(args.dpi / 25.4, args.dpi / 25.4)
         self.cr = cairo.Context(self.surface)
 
-        if args.output is None:
-            # The only reason for this is that `cairo_surface_write_to_png_stream`
-            # is not exposed by pycairo.
-            raise UserError("PNG does not support streaming to stdout.")
+        if args.mode == "sequence":
+            self.output_dir = args.output
+            self.index = -1
+            os.mkdir(output_dir)
+            self.next_image()
         else:
-            if args.mode == "sequence":
-                self.output_dir = args.output
-                self.index = -1
-                os.mkdir(output_dir)
-                self.next_image()
-            else:
-                self.output = args.output
+            self.output = args.output
 
     def write(self):
         self.surface.write_to_png(self.output)
@@ -209,6 +206,54 @@ class PngSurfaceWrapper(SurfaceWrapper):
 
     def next_page(self):
         raise UserError("The PNG format does not support slideshows.")
+
+
+# This factors out the common case: PS, PDF, and SVG all basically work the same way.
+class VectorSurfaceWrapper(SurfaceWrapper):
+    def __init__(self, args):
+        self.width, self.height = args.size
+        self.window = Rect.from_top_left(Point(0, 0), self.width, self.height)
+        self.scale = Point(72 / 25.4, 72 / 25.4)
+
+        if args.mode == "sequence":
+            self.output_dir = args.output
+            self.index = -1
+            os.mkdir(args.output)
+            self.next_image()
+        else:
+            self.prepare_context(args.output)
+
+    def write(self):
+        self.surface.finish()
+
+    def prepare_context(self, path):
+        self.surface = self.create_surface(path)
+        self.cr = cairo.Context(self.surface)
+
+    def create_surface(self, path):
+        raise NotImplemented
+
+    def next_image(self):
+        self.index += 1
+        self.prepare_context(self, os.path.join(self.output_dir, "%d.svg" % self.index))
+
+    def next_page(self):
+        self.surface.show_page()
+
+
+class PsSurfaceWrapper(VectorSurfaceWrapper):
+    def create_surface(self, path):
+        return cairo.PSSurface(path, self.width, self.height)
+
+
+class PdfSurfaceWrapper(VectorSurfaceWrapper):
+    def create_surface(self, path):
+        return cairo.PDFSurface(path, self.width, self.height)
+
+
+class SvgSurfaceWrapper(VectorSurfaceWrapper):
+    def create_surface(self, path):
+        return cairo.SVGSurface(path, self.width, self.height)
 
 
 class DummyReader:
@@ -253,7 +298,8 @@ if __name__ == "__main__":
         "-o", "--output",
         help="The output file path (defaults to `stdout`)",
         metavar="FILE",
-        type=str
+        type=str,
+        required=True
     )
 
     parser.add_argument(
@@ -271,15 +317,6 @@ if __name__ == "__main__":
         default=96,
         type=int,
     )
-
-    # TBD: we can't support this yet.
-    # parser.add_argument(
-    #     "-p", "--param",
-    #     help="Specify the value of a parameter..",
-    #     nargs=2,
-    #     dest="params",
-    #     action="append",
-    # )
 
     parser.add_argument(
         "script",
