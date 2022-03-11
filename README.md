@@ -1,70 +1,143 @@
 # Readme
 
 *Cairo Sandbox* is an interactive sandbox for the cairo vector
-graphics library.
+graphics library, and a framework for *procedural graphics*.
 
-Cairo is a wonderful library, but it can be hard to experiment with,
-and it can be time-consuming to set up a context for
-experimentation. It can also be hard to reason about transforms
-without interactive feedback.
+![Screenshot](screenshot.png)
 
-*Cairo Sandbox* Targeted at anyone who needs to do custom drawing
-with cairo -- whether you're trying to develp a custom GTK Widget, or
-visualizations for. The goal is to quickly get you up-and-runing with
-a cairo context, then get out of your way while you hack.
+Cairo is a wonderful library, useful in a variety of contexts,
+and which yields crisp results.
 
-It provides a number of useful features that an aid with developing
-and debugging drawing.
+*Cairo Sandbox* is targeted at anyone who wants to do custom drawing
+with cairo -- whether you're trying to develp a custom GTK Widget,
+dynamic visualizations, embedded display, or parametric graphics.
 
-- Instantly launch into a working cairo context ready for drawing.
+The goal is get you up-and-runing and get out of the way. At the end,
+you should have a script which you can port to your target codebase,
+or use directly in your application.
+
+## Sandbox Scripts
+
+*Scripts are stateless! State is not preserved between frames!*.
+
+An image is a python script, which is *run to completion* to produce
+each frame, similar to the way "shader programs" work in OpenGL. Your
+script may define "parameters", which are external values.
+
+Each time a parameter changes, your script is re-run, and the output
+is re-rendered. Alternatively, you can create generate static images
+via the offline renderer.
+
+As an optimization, cairo_sandbox dynamically compiles your script to
+bytecode at load time, and executes the compiled bytecode for each
+frame, rather than executing directly from source. I suspect that, in
+practice, the rasterization overhead is likely to be much higher than
+the interpreter overhead.
+
+## What it is
+
+It consists of the following components:
+- `script.py`         -- library for loading and running sandbox scripts.
+- `params`            -- library for defining and using parameters in scripts.
+- `helpers.py`        -- a higher-level wrapper around cairo, the use of which is optional
+- `cairo_sandbox.py`  -- an interactive rendering environment for script development.
+- `wayland_runner.py` -- a stand-alone fullscreen renderer for wayland, with no GTK dependency.
+- `offline.py`        -- a stand-alone renderer for static images
+
+## Features
+
+- Instantly launch into a cairo context ready for drawing.
 - Automatic reload when your script changes.
-- Debug feedback:
- - Current point and un-rasterized cairo path are shown
- - Exceptions and stack traces are displayed in real-time.
 - Create live-editable parameters for easy tinkering.
-- Automatically decodes JSON data from `stdin`, allowing you to
-  experiment with values coming from arbitrary sources.
+- Decode parameters from `stdin`.
+- Stand-alone wayland runner, for embedded applications
+- Offline renderer, for static content.
+
+### Debug feedback
+
+- Current point and un-rasterized cairo path are shown.
+- Exceptions and stack traces are displayed in real-time.
+- `debug_trace` and `debug_fill` for easy path debugging.
+
+### `helpers.py`
+
+- `save`, a context manager which guarantees to call `restore`
+- `box`,  a context manager for layout
+- basic 2D geometry
 
 # Usage
 
-Basic usage is as simple as: `./cairo_sandbox <file>`
+## Script Development
 
-If you have a data source which can output JSON to `stdout`, you can
-pipe it into cairo sandbox, like so:
+`./cairo_sandbox <script>`
 
-`my_json_source | ./cairo_sandbox <file>`
+## Kiosk Mode
 
-**TBD** Add a more compelling example and demo of this feature.
+You need a data source which can output JSON to `stdout`. It should
+write a map on each line, with a key for each parameter defined by the
+script. e.g:
+
+`my_json_source | ./wayland_runner.py <script>`
+
+You can also define parameters via the environment. Values from
+`stdin` take priority over the values defined in the environment.
+
+See the scripts in the examples directory.
 
 # API
 
-See the `helpers` companion library, alongside this script.
+## Cairo
 
-- `pycairo`: https://pycairo.readthedocs.io/en/latest/getting_started.html
+This is exposed to scripts as the `cairo` and  `cr` globals.
 
-## Modes
+- `cairo` The pycairo library.
+- `cr`    The current cairo context, ready for drawing
 
-You script runs in two modes, identifiable via the `__name__`
-global. These modes are:
+See https://pycairo.readthedocs.io/en/latest/getting_started.html for
+more.
+
+## Pango
+
+Used for text rendering, but not directly exposed to scripts.
+
+## Params
+
+An interface for defining and using parameters. This serves two purposes:
+- easy tweaking of values as you write your script
+- allowing for easy customization / animation / dynamism in your
+  application
+
+## `helpers` companion library
+
+It provides some higher-level abstractions and missing features that
+ease writing scripts, especially in the beginning.
+- `Point`
+- `Rect`
+- `Box`
+- `Save`
+
+# Script Modes
+
+*Scripts are stateless! State is not preserved between frames!*.
+
+You script runs at least twice, in two modes.
+
+Your script should query the `__name__` global. These modes are:
 
 - `'init'`
 - `'render'`
 
-### Init Mode
+## Init Mode
 
-Init mode is run whenver your script is reloaded. This is when your
-script should define parameters. This mode can also be used for
-one-time slow operations, such as pre-computing large arrays or
-loading images off disk.
-
-See `examples/parameters.py`.
+Init mode is run after your script is loaded or re-loaded. This is
+when your script should define parameters.
 
 Init Mode Globals:
 
 - `params`, a `helpers.ParameterGroup` instance.
 
-In addition, each of the `helpers.Parameter` classes is available
-under a short ailias.
+In addition, each of the parameter classes is available under a short
+ailias.
 
 - `Numeric`
 - `Color`
@@ -80,13 +153,20 @@ under a short ailias.
 - `Script`
 - `Custom`
 
-### Render Mode
+## Render Mode
 
-Render mode is run to draw each frame. The entire window is always
-redrawn completely for each frame.
+Render mode is run to draw each frame.
+
+The entire canvas is redrawn completely for each frame, and your
+script is allowed to run to completion.
+
+You should take care not to make any blocking calls or heavy
+computation in this mode.
+
+*State is not preserved between frames! cairo_sandbox scripts are
+stateless!*
 
 Render Mode Globals:
-
 - `cr`: the cairo context object
 - `cairo`: the pycairo library
 - `helpers`: the companion helper object, which extends the cr object
@@ -94,36 +174,12 @@ Render Mode Globals:
   with additional methods.
 - `window`: a `helpers.Rect` object with the current window geometry
 - `scale_mm`: a tuple of (x, y) indicating the scale for calculating physical distances
-- `stdin`: A `dict` containing the most recent JSON object decoded from stdin.
-- `mouse`: An object relfecting the current pointer state, TBD.
 
 # Installation
 
-Not necessary, not possible at the moment. Installation scripts are TBD.
+Not necessary, not possible at the moment.
 
 ## Dependencies
 
-Requires gobject introspection libraries for `Gtk`, `pycairo`. Automatic reloading requires `watchdog`.
-
-## Debian
-
-TBD
-
-# Open Questions
-
-- How scripts should specify their "native" size and units?
-  - How should scripts behave when output is too small?
-  - How should scripts behave when output is far larger than expected?
-  - Should scripts work in physical units by default? or Should they be in device coordinates by default?
-- How to compose scripts together?
-- How to handle "backgrounds" in scripts?
-  - Should scripts have a "transparent" background by default?
-  - Should there be a "background directive" that the runner should respect?
-- Parameters vs stdin?
-  - should these be unified under a namespace?
-  - should parameters *always* be supplied by an external process?
-- Interactivity
-  - mouse
-  - keyboard
-  - text input
-  - how to handle state changes
+- gobject introspection libraries for `Gtk`, `pycairo`.
+- Automatic reloading requires `watchdog`.
