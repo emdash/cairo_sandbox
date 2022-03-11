@@ -133,7 +133,6 @@ class GUI(object):
 
         self.window = Gtk.Window()
         self.window.set_title("Cairo Sandbox: " + sys.argv[1])
-        self.window.connect('key-press-event', self.reload)
         self.window.connect("destroy", Gtk.main_quit)
         self.window.add(pane)
         self.window.resize(1024, 768)
