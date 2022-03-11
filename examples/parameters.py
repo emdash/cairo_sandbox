@@ -29,9 +29,7 @@ if __name__ == "init":
             "Best": cairo.Antialias.BEST
         }, "Default"))
 
-    params.define("image",
-                  Image(cairo.SolidPattern(0, 0, 0)))
-    params.setResolution(800, 600)
+    params.define("image", Image(cairo.SolidPattern(0, 0, 0)))
 else:
     cr.set_antialias(params["antialias"])
     cr.set_font_size(24)

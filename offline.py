@@ -23,8 +23,7 @@
 
 """Offline rendering of cairo_sandbox scripts.
 
-Renders the given cairo_sandbox script to a file or stdout as
-determined by the given options.
+Renders the given cairo_sandbox script to the given output file.
 
 Intended mainly for batch processing workflows (documentation, unit
 tests, etc).
@@ -33,8 +32,8 @@ The following modes of operation are supported:
 - nostdin    -- do not read params from stdin. all params must be
                 supplied via the environment. implies oneshot.
 - oneshot    -- render a single frame from stdin.
-- continuous -- overwrite the same output file.
-- sequence   -- render each frame as a separate file in the given directory.
+- continuous -- render each frame to the same output path.
+- sequence   -- render each frame to a separate file in the given directory.
 - slideshow  -- render each frame as a separate page in the given file
                 (ps, pdf, and SVG only).
 """
@@ -204,7 +203,7 @@ class PngSurfaceWrapper(SurfaceWrapper):
         self.index += 1
         self.output = os.path.join(self.output_dir, "%d.png" % self.index)
 
-    def next_page(self):
+    def slideshow(self):
         raise UserError("The PNG format does not support slideshows.")
 
 
@@ -296,7 +295,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "-o", "--output",
-        help="The output file path (defaults to `stdout`)",
+        help="The output file path",
         metavar="FILE",
         type=str,
         required=True

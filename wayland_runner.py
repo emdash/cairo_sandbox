@@ -293,10 +293,6 @@ if __name__ == "__main__":
     params = params.ParameterGroup()
     script.reload(params)
 
-    # TBD: this only works for a static output, it will break if the
-    # output resoluation changes. That's okay for this use-case
-    # however.
-    width, height = params.resolution
     client = WaylandClient()
     window = Rect.from_top_left(
         Point(0, 0),

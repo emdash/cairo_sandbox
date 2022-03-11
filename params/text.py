@@ -279,7 +279,6 @@ class ParameterGroup(object):
 
     def __init__(self):
         self.params = OrderedDict()
-        self.resolution = 640, 480
 
     def define(self, name, param):
         """Define a new parameter for later use in the a user script."""
@@ -302,18 +301,6 @@ class ParameterGroup(object):
             return param.parse(env[name])
         else:
             return param.default
-
-    def setResolution(self, x, y):
-        """Set the resolution of the drawing area.
-
-        This will be used in a subsequent `set_size_request_call` on
-        the underlying output widget.
-
-        This method doesn't really belong in this class, but it is the
-        most convenient place to put it for the time being.
-
-        """
-        self.resolution = x, y
 
     def getInitEnv(self):
         return {
