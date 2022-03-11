@@ -123,23 +123,23 @@ class GUI(object):
         self.da.add_tick_callback(self.update)
         self.dc = DragController(self.da, self)
 
-        sw = Gtk.ScrolledWindow()
-        sw.add(self.da)
-
-        self.render = Gtk.Window()
-        self.render.set_title("Render: " + sys.argv[1])
-        self.render.connect('key-press-event', self.reload)
-        self.render.connect("destroy", Gtk.main_quit)
-        self.render.add(sw)
-        self.render.resize(640, 480)
-
-        self.parameters = Gtk.Window()
-        self.parameters.set_title("Parameters: " + sys.argv[1])
+        self.parameters = Gtk.ScrolledWindow()
         self.parameters.connect("destroy", Gtk.main_quit)
 
+        pane = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+        pane.pack1(self.da)
+        pane.pack2(self.parameters)
+        pane.set_position(480)
+
+        self.window = Gtk.Window()
+        self.window.set_title("Cairo Sandbox: " + sys.argv[1])
+        self.window.connect('key-press-event', self.reload)
+        self.window.connect("destroy", Gtk.main_quit)
+        self.window.add(pane)
+        self.window.resize(1024, 768)
+
         self.reload()
-        self.render.show_all()
-        self.parameters.show_all()
+        self.window.show_all()
 
     def reload(self, *unused):
         print("reloading: " + self.path)
