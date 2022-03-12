@@ -278,6 +278,9 @@ class Rect(object):
     def radius(self):
         return min(self.width, self.height) * 0.5
 
+    def guides(self, vertical, horizontal):
+        return Guides(self, vertical, horizontal)
+
 
 class Save(object):
 
@@ -324,3 +327,117 @@ class Box(object):
         self.cr.restore()
         if self.clip:
             self.cr.append_path(self.path)
+
+
+class Guides:
+
+    """Slice a rectangle horizontally and vertically.
+
+    The given rectangle is subdivided by a set of horizontal and
+    vertical guide lines. The guide lines are interpreted as a
+    percentage of the Rect's total width or height.
+
+    This defines a set of intersection points within the rectangle as
+    well as a cet of "cells" within the rectangle between each line.
+
+    The first and most obvious use case is to create tabular
+    layouts. One can refer to the logical position of a column or row,
+    independent of its exact position or offset.
+
+    A less obvious use case is defining layout lines or "skeletal"
+    geometry. In art and science, one often finds that certain rules of
+    proportions should be observed, e.g: golden ratio, rule of thirds,
+    human proportions, etc.
+
+    Intersection points and cells are identified by a 2D index. Consider
+    the following example:
+
+      g = Guides(
+         Rect(Point(0, 0), 100, 100)),
+         (0.25, 0.5, 0.75),
+         (1/3, 0.75)
+      )
+
+    For points, (0, 0) identifies the northwest corner of the enclosing
+    Rect. (1, 1) identifies the intersection of the first two
+    user-supplied guide lines:
+
+      g.intersection(0, 0) # Point(-50, -50)
+      g.intersection(1, 0) # Point(-25, -50)
+      g.intersection(1, 1) # Point(-25, -16.666...)
+
+    For cells, (0, 0) identifies the cell whose northwest corner is
+    g.intersection(0, 0), and whose southeast corner is
+    g.intersection(1, 1).
+
+    When you want to reference the point at which two guides meet, use the
+    `intersection()` method. When you want to reference the space
+    *between* guides, use the `cell()` method.
+
+    If you want to refer to and entire row or column, use the `row()` or
+    `col()` methods.
+
+    Note: guide positions are "absolute" positions from the top or left
+    edge. In order for indexing to work correctly, horizontal and
+    vertical guide positions are sorted in ascending order. To avoid
+    confusion, always specify guide positions in ascending order.
+    """
+
+    def __init__(self, rect, vertical, horizontal):
+        self.rect = rect
+        self.horizontal = (
+            0,
+            *(rect.height * h for h in sorted(horizontal)),
+            rect.height
+        )
+        self.vertical = (
+            0,
+            *(rect.width * v for v in sorted(vertical)),
+            rect.width
+        )
+
+    def intersection(self, v, h):
+        """Get the intersection point for the given 2d index."""
+        return self.rect.northwest() + Point(self.vertical[v], self.horizontal[h])
+
+    def cell(self, v, h):
+        """Get the table cell from the given 2d index."""
+        tl = self.intersection(v, h)
+        br = self.intersection(v + 1, h + 1)
+        size = br - tl
+        return Rect.from_top_left(tl, size.x, size.y)
+
+    def column(self, h):
+        tl = self.intersection(h, 0)
+        tr = self.intersection(h + 1, 0)
+        size = tr - tl
+        return Rect.from_top_left(tl, size.x, self.rect.height)
+
+    def row(self, v):
+        tl = self.intersection(0, v)
+        bl = self.intersection(0, v + 1)
+        size = bl - tl
+        return Rect.from_top_left(tl, self.rect.width, size.y)
+
+    def draw(self, helpers, show_outline=True):
+        """Add the guide to the current path, but do not fill or stroke.
+
+        Use this method if you want control over how the guides are
+        displayed.
+        """
+        if show_outline:
+            helpers.rect(self.rect)
+        for h in self.horizontal:
+            helpers.hline(h, self.rect)
+        for v in self.vertical:
+            helpers.vline(v, self.rect)
+
+    # TBD: add show_indices option
+    def debug(self, helpers, show_outline=True):
+        """Render the guidelines using debug_stroke.
+
+        Use this method if you want to make sure the guide lines are
+        legible against anything previously drawn to the canvas.
+        """
+        self.draw(helpers, show_outline)
+        helpers.debug_stroke()
