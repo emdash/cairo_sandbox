@@ -4,7 +4,6 @@ if __name__ == "init":
     params.define("waist",      Text("Narrow Waist"))
     params.define("font",       Font("Nakula Bold 6"))
     params.define("tilt",       Numeric(1/128, 1, 1/128, 0.2))
-    params.setResolution(640, 480)
 else:
     def elipse(center, radius, forward, complete=False):
         with helpers.save():
