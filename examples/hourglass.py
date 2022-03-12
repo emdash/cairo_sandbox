@@ -4,6 +4,7 @@ if __name__ == "init":
     params.define("waist",      Text("Narrow Waist"))
     params.define("font",       Font("Nakula Bold 6"))
     params.define("tilt",       Numeric(1/128, 1, 1/128, 0.2))
+    params.define("stroke",     Numeric(1/128, 25, 1/128, 2.5))
 else:
     def elipse(center, radius, forward, complete=False):
         with helpers.save():
@@ -38,7 +39,7 @@ else:
             with helpers.save():
                 cr.translate(0, 2 * tilt * 20)
                 helpers.show_layout(layout, centered=True)
-            cr.set_line_width(3.0)
+            cr.set_line_width(stroke)
 
             if fill:
                 elipse(box.north(), box.width / 2, True)
