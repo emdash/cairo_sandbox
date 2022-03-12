@@ -281,6 +281,15 @@ class Rect(object):
     def guides(self, vertical, horizontal):
         return Guides(self, vertical, horizontal)
 
+    def grid(self, cols, rows):
+        x_step = 1 / cols
+        y_step = 1 / rows
+        return Guides(
+            self,
+            (i / cols for i in range(1, cols + 1)),
+            (i / rows for i in range(1, rows + 1))
+        )
+
 
 class Save(object):
 
@@ -377,6 +386,8 @@ class Guides:
     If you want to refer to and entire row or column, use the `row()` or
     `col()` methods.
 
+    You can also iterate over all cells in row-first or col-first order.
+
     Note: guide positions are "absolute" positions from the top or left
     edge. In order for indexing to work correctly, horizontal and
     vertical guide positions are sorted in ascending order. To avoid
@@ -407,6 +418,16 @@ class Guides:
         size = br - tl
         return Rect.from_top_left(tl, size.x, size.y)
 
+    def cells(self, col_first=True):
+        if col_first:
+            for i in range(len(self.horizontal) - 2):
+                for j in range(len(self.vertical) - 2):
+                    yield self.cell(j, i)
+        else:
+            for i in range(len(self.vertical) - 2):
+                for j in range(len(self.horizontal) - 2):
+                    yield self.cell(i, j)
+
     def column(self, h):
         tl = self.intersection(h, 0)
         tr = self.intersection(h + 1, 0)
@@ -427,9 +448,9 @@ class Guides:
         """
         if show_outline:
             helpers.rect(self.rect)
-        for h in self.horizontal:
+        for h in self.horizontal[1:-1]:
             helpers.hline(h, self.rect)
-        for v in self.vertical:
+        for v in self.vertical[1:-1]:
             helpers.vline(v, self.rect)
 
     # TBD: add show_indices option
